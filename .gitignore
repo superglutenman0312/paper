@@ -3,7 +3,5 @@ nexmon/
 nexmon_csi/
 CSI-dataset-for-indoor-localization/
 csi-rssi-dataset-indoor-nav/
-Histloc_try/mall_data/
-Histloc_try/*.h5
 *.h5
 *.csv
