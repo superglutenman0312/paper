@@ -1,20 +1,14 @@
 '''
-python .\DANN_CORR.py ^
-    --training_source_domain_data D:\Experiment\data\231116\GalaxyA51\wireless_training.csv ^
-    --training_target_domain_data D:\Experiment\data\231117\GalaxyA51\wireless_training.csv ^
-    --model_path 231116_231117.pth ^
-    --work_dir 231116_231117\0.1_10
-python .\DANN_CORR.py ^
-    --testing_data_list D:\Experiment\data\231116\GalaxyA51\routes ^
-                        D:\Experiment\data\220318\GalaxyA51\routes ^
-                        D:\Experiment\data\231117\GalaxyA51\routes ^
-    --model_path 231116_231117.pth ^
-    --work_dir 231116_231117\0.1_10
-python ..\..\model_comparison\evaluator.py \
-    --model_name DANN_CORR \
-    --directory 220318_231116\0.1_10_0.0 \
-    --source_domain 220318 \
-    --target_domain 231116
+python .\DANN_CORR.py --training_source_domain_data D:\Experiment\data\MTLocData\Mall\2021-11-20\wireless_training.csv ^
+                --training_target_domain_data D:\Experiment\data\MTLocData\Mall\2022-12-21\wireless_training.csv ^
+                --work_dir 211120_221221\\unlabeled\0.1_10
+python DANN_CORR.py --test --work_dir 211120_221221\\unlabeled\0.1_10
+
+python DANN_CORR_MALL.py --training_source_domain_data "D:/paper_thesis/Histloc_try/mall_data/Mall/2021-11-20/wireless_training.csv" --training_target_domain_data "D:/paper_thesis/Histloc_try/mall_data/Mall/2022-12-21/wireless_training.csv" --work_dir "test_251104"
+python DANN_CORR_MALL.py --test --work_dir "test_251104"
+
+python DANN_CORR_MCSL.py --training_source_domain_data "D:/paper_thesis/Histloc_real/Experiment/data/231116/GalaxyA51/wireless_training.csv" --training_target_domain_data "D:/paper_thesis/Histloc_real/Experiment/data/231117/GalaxyA51/wireless_training.csv" --work_dir "test_251104"
+python DANN_CORR_MCSL.py --test --work_dir "MCSL_unlabeled_251108"
 '''
 import torch
 import torch.nn as nn
@@ -31,11 +25,6 @@ import cv2
 import argparse
 import os
 import sys
-sys.path.append('..\\..\\model_comparison')
-from walk_definitions import walk_class
-from evaluator import Evaluator
-sys.path.append('..\\model_comparison')
-from drop_out_plot import plot_lines
 
 class FeatureExtractor(nn.Module):
     def __init__(self, input_size, hidden_size1, hidden_size2):
@@ -53,13 +42,12 @@ class FeatureExtractor(nn.Module):
 class LabelPredictor(nn.Module):
     def __init__(self, input_size, num_classes):
         super(LabelPredictor, self).__init__()
-        self.fc1 = nn.Linear(input_size, 32)
-        self.fc2 = nn.Linear(32, num_classes)
+        self.fc1 = nn.Linear(input_size, num_classes)
 
     def forward(self, x):
         x = self.fc1(x)
-        x = torch.relu(x)
-        x = self.fc2(x)
+        # x = torch.relu(x)
+        # x = self.fc2(x)
         return x
 
 class DomainAdaptationModel(nn.Module):
@@ -109,14 +97,14 @@ class HistCorrDANNModel:
 
         # Drop samples from the target domain based on drop_out_rate
         if drop_out_rate > 0:
-            num_samples_to_drop = int(len(self.target_dataset) * drop_out_rate)
+            num_samples_to_drop = int(len(self.source_dataset) * drop_out_rate)
             if drop_out_rate >= 1.0:
                 num_samples_to_drop = num_samples_to_drop - 2
-            drop_indices = np.random.choice(len(self.target_dataset), num_samples_to_drop, replace=False)
-            self.target_dataset.data = np.delete(self.target_dataset.data, drop_indices, axis=0)
+            drop_indices = np.random.choice(len(self.source_dataset), num_samples_to_drop, replace=False)
+            self.source_dataset.data = np.delete(self.source_dataset.data, drop_indices, axis=0)
 
         print(f"Total Source Dataset Size: {len(self.source_dataset)}")
-        print(f"Total Target Dataset Size: {len(self.target_dataset)}")
+        print(f"Total Target Dataset Size: {len(self.source_dataset)}")
 
         # Split source data into training and validation sets
         source_train, source_val = train_test_split(self.source_dataset, test_size=0.2, random_state=42)
@@ -154,6 +142,7 @@ class HistCorrDANNModel:
     def train(self, num_epochs=10, unlabeled=False):
         unlabeled = unlabeled
         for epoch in range(num_epochs):
+            # Training
             loss_list, acc_list = self._run_epoch([self.source_train_loader, self.target_train_loader], training=True, unlabeled=unlabeled)
 
             self.total_losses.append(loss_list[0])
@@ -188,6 +177,7 @@ class HistCorrDANNModel:
     def _run_epoch(self, data_loader, training=False, unlabeled=False):
         source_correct_predictions, source_total_samples = 0, 0
         target_correct_predictions, target_total_samples = 0, 0
+        total_loss_all, label_loss_all, domain_loss_all = 0.0, 0.0, 0.0
         # Create infinite iterators over datasets
         source_iter = cycle(data_loader[0])
         target_iter = cycle(data_loader[1])
@@ -211,8 +201,14 @@ class HistCorrDANNModel:
             target_hist = cv2.calcHist([target_features.detach().numpy().flatten()], [0], None, [100], [0, 1])
             domain_loss = self.domain_invariance_loss(source_hist, target_hist)
 
-            total_loss = self.loss_weights[0] * label_loss + self.loss_weights[1] * domain_loss
-
+            # 這裡和論文不一致?!
+            # total_loss = self.loss_weights[0] * label_loss + self.loss_weights[1] * domain_loss
+            total_loss = self.loss_weights[0] * domain_loss + self.loss_weights[1] * label_loss
+            
+            total_loss_all += total_loss.item()
+            label_loss_all += label_loss.item()
+            domain_loss_all += domain_loss
+            
             if training:
                 self.optimizer.zero_grad()
                 total_loss.backward()
@@ -227,8 +223,9 @@ class HistCorrDANNModel:
             target_correct_predictions += (target_preds == target_labels).sum().item()
             target_total_samples += target_labels.size(0)
             target_accuracy = target_correct_predictions / target_total_samples
-            loss_list = [total_loss.item(), label_loss.item(), domain_loss]
+            # loss_list = [total_loss.item(), label_loss.item(), domain_loss]
             acc_list = [(source_accuracy + target_accuracy) / 2, source_accuracy, target_accuracy]
+        loss_list = [total_loss_all / num_batches, label_loss_all / num_batches, domain_loss_all / num_batches]
         return loss_list, acc_list
 
     def save_model(self):
@@ -279,16 +276,16 @@ class HistCorrDANNModel:
         plt.tight_layout()  # Adjust layout for better spacing
         plt.savefig('loss_and_accuracy.png')
 
-    def save_model_architecture(self, file_path='model_architecture'):
-        # Create a dummy input for visualization
-        dummy_input = torch.randn(1, 7)  # Assuming input size is (batch_size, 7)
+    # def save_model_architecture(self, file_path='model_architecture'):
+    #     # Create a dummy input for visualization
+    #     dummy_input = torch.randn(1, 1033)  # Assuming input size is (batch_size, 7)
 
-        # Generate a graph of the model architecture
-        # graph = make_dot(self.domain_adaptation_model(dummy_input), params=dict(self.domain_adaptation_model.named_parameters()))
+    #     # Generate a graph of the model architecture
+    #     graph = make_dot(self.domain_adaptation_model(dummy_input), params=dict(self.domain_adaptation_model.named_parameters()))
 
-        # Save the graph as an image file
-        # graph.render(file_path, format='png')
-        print(f"Model architecture saved as {file_path}")
+    #     # Save the graph as an image file
+    #     graph.render(file_path, format='png')
+    #     print(f"Model architecture saved as {file_path}")
 
     def load_model(self, model_path):
         if os.path.exists(model_path):
@@ -302,77 +299,64 @@ class HistCorrDANNModel:
             features, labels_pred = self.domain_adaptation_model(features)
         return labels_pred
 
-    def generate_predictions(self, model_path):
-        self.load_model(model_path)
-        prediction_results = {
-            'label': [],
-            'pred': []
-        }
-        # 進行預測
-        self.domain_adaptation_model.eval()
+    def generate_predictions(self, file_path, output_path):
+        predictions = {'label': [], 'pred': []}
+        self.load_test_data(file_path)
         with torch.no_grad():
             for test_batch, true_label_batch in self.test_loader:
-                features, labels_pred = self.domain_adaptation_model(test_batch)
+                labels_pred = self.predict(test_batch)
                 _, preds = torch.max(labels_pred, 1)
-                predicted_labels = preds + 1  # 加 1 是为了将索引转换为 1 到 41 的标签
+                predicted_labels = preds + 1  # 加 1 是为了将索引转换为 1 到 49 的标签
                 label = true_label_batch + 1
-                # 將預測結果保存到 prediction_results 中
-                prediction_results['label'].extend(label.tolist())
-                prediction_results['pred'].extend(predicted_labels.tolist())
-        return pd.DataFrame(prediction_results)
+                # 將預測結果保存到 predictions 中
+                predictions['label'].extend(label.tolist())
+                predictions['pred'].extend(predicted_labels.tolist())
+        # 将预测结果保存为 CSV 文件
+        results = pd.DataFrame({'label': predictions['label'], 'pred': predictions['pred']})
+        results.to_csv(output_path, index=False)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train DANN Model')
     parser.add_argument('--training_source_domain_data', type=str, help='Path to the source domain data file')
     parser.add_argument('--training_target_domain_data', type=str, help='Path to the target domain data file')
-    parser.add_argument('--testing_data_list', nargs='+', type=str, help='List of testing data paths')
+    parser.add_argument('--test', action='store_true' , help='for test')
     parser.add_argument('--model_path', type=str, default='my_model.pth', help='path of .pth file of model')
     parser.add_argument('--work_dir', type=str, default='DANN_CORR', help='create new directory to save result')
     args = parser.parse_args()
     loss_weights = [0.1, 10]
-    epoch = 500
+    epoch = 100
     unlabeled = False
     
     domain1_result = []
     domain2_result = []
     domain3_result = []
 
-    data_drop_out_list = np.arange(0.9, 0.95, 0.1)
+    # data_drop_out_list = np.arange(0.0, 0.9, 0.95)
+    data_drop_out_list = np.arange(0.9)
     
     for data_drop_out in data_drop_out_list:
         # 創建 DANNModel    
         dann_model = HistCorrDANNModel(model_save_path=args.model_path, loss_weights=loss_weights, work_dir=f'{args.work_dir}_{data_drop_out:.1f}')
-        dann_model.save_model_architecture()
+        # dann_model.save_model_architecture()
         # 讀取資料
         if args.training_source_domain_data and args.training_target_domain_data:
             # 訓練模型
             dann_model.load_train_data(args.training_source_domain_data, args.training_target_domain_data, data_drop_out)
             dann_model.train(num_epochs=epoch, unlabeled=unlabeled)
             dann_model.plot_training_results()
-        elif args.testing_data_list:
-            testing_data_path_list = args.testing_data_list
-            for testing_data_path in testing_data_path_list:
-                for walk_str, walk_list in walk_class:
-                    prediction_results = pd.DataFrame()
-                    for walk in walk_list:
-                        # 加載數據
-                        dann_model.load_test_data(f"{testing_data_path}\\{walk}.csv")
-                        results = dann_model.generate_predictions(args.model_path)
-                        prediction_results = pd.concat([prediction_results, results], ignore_index=True)
-                    split_path = testing_data_path.split('\\')
-                    predictions_dir = f'predictions/{split_path[3]}'
-                    os.makedirs(predictions_dir, exist_ok=True)
-                    prediction_results.to_csv(os.path.join(predictions_dir, f'{walk_str}_predictions.csv'), index=False)
-            predicion_data_path_list = os.listdir('predictions/')
-            evaluator = Evaluator()
-            mde_list = evaluator.test(predicion_data_path_list, f'{args.work_dir}_{data_drop_out}')
-            domain1_result.append(mde_list[0][1])
-            domain2_result.append(mde_list[1][1])
-            domain3_result.append(mde_list[2][1])
+        elif args.test:
+            dann_model.load_model(args.model_path)
+            testing_file_paths = [
+                        r'D:/paper_thesis/Histloc_real/Experiment/data/231116/GalaxyA51/wireless_testing.csv',
+                        r'D:/paper_thesis/Histloc_real/Experiment/data/231117/GalaxyA51/wireless_testing.csv'
+                    ]
+            output_paths = ['predictions/211120_results.csv', 'predictions/221221_results.csv']
+            if not os.path.exists('predictions'):
+                os.makedirs('predictions')
+            for testing_file_path, output_path in zip(testing_file_paths, output_paths):
+                dann_model.generate_predictions(testing_file_path, output_path)
+                print("done")
         else:
             print('Please specify --training_source_domain_data/--training_target_domain_data or --testing_data_list option.')
 
         os.chdir('..\\..')
-
-    if args.testing_data_list:
-        plot_lines(data_drop_out_list, domain2_result, domain_name='231116', output_path=args.work_dir, title='Source_domain_to_Target_domain')
