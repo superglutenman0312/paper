@@ -1,7 +1,2 @@
 Histloc_real/
-nexmon/
-nexmon_csi/
-CSI-dataset-for-indoor-localization/
-csi-rssi-dataset-indoor-nav/
-*.h5
-*.csv
+My/data/MTLocData/
