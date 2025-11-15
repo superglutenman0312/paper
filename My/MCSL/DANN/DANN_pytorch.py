@@ -1,34 +1,26 @@
-r'''
-python DANN_pytorch_reverse.py --training_source_domain_data D:\Experiment\data\\UM_DSI_DB_v1.0.0_lite\data\tony_data_reverse\2020-02-19\wireless_training.csv ^
-                       --training_target_domain_data D:\Experiment\data\\UM_DSI_DB_v1.0.0_lite\data\tony_data_reverse\2019-06-11\wireless_training.csv ^
-                       --work_dir 200219_190611\1_0
-python DANN_pytorch_reverse.py --test --work_dir 200219_190611\1_0
+'''
+python .\DANN_pytorch.py \
+    --training_source_domain_data D:\Experiment\data\220318\GalaxyA51\wireless_training.csv \
+    --training_target_domain_data D:\Experiment\data\231116\GalaxyA51\wireless_training.csv \
+    --model_path 220318_231116.pth \
+    --work_dir 220318_231116\0.1_10
+python .\DANN_pytorch.py \
+    --testing_data_list D:\Experiment\data\231116\GalaxyA51\routes \
+                        D:\Experiment\data\220318\GalaxyA51\routes \
+                        D:\Experiment\data\231117\GalaxyA51\routes \
+    --model_path 220318_231116.pth \
+    --work_dir 220318_231116\0.1_10
 python ..\..\model_comparison\evaluator.py \
     --model_name DANN_CORR \
     --directory 220318_231116\0.1_10_0.0 \
     --source_domain 220318 \
     --target_domain 231116
-
-# time reversal 1
-python DANN_pytorch_reverse.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data_reverse\2020-02-19\wireless_training.csv ^
-                               --training_target_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data_reverse\2019-06-11\wireless_training.csv ^
-                               --work_dir time_reversal_1\251113_
-python DANN_pytorch_reverse.py --test --work_dir time_reversal_1\251113_
-python ../evaluator.py --file 
-
-# time reversal 2
-python DANN_pytorch_reverse.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data_reverse\2020-02-19\wireless_training.csv ^
-                               --training_target_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data_reverse\2019-10-09\wireless_training.csv ^
-                               --work_dir time_reversal_2\251113_
-python DANN_pytorch_reverse.py --test --work_dir time_reversal_2\251113_
-python ../evaluator.py --file 
-
 '''
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
-# from torchsummary import summary
+from torchsummary import summary
 import argparse
 from torch.utils.data import Dataset, DataLoader
 from sklearn.model_selection import train_test_split
@@ -39,7 +31,11 @@ import math
 import matplotlib.pyplot as plt
 import pandas as pd
 import sys
-sys.path.append('..\\DNN')
+sys.path.append('..\\..\\model_comparison')
+from walk_definitions import walk_class
+from evaluator import Evaluator
+sys.path.append('..\\model_comparison')
+from drop_out_plot import plot_lines
 
 class IndoorLocalizationDataset(Dataset):
     def __init__(self, file_path):
@@ -56,9 +52,9 @@ class IndoorLocalizationDataset(Dataset):
 class FeatureExtractor(nn.Module):
     def __init__(self):
         super(FeatureExtractor, self).__init__()
-        self.layer1 = nn.Linear(191, 128)
+        self.layer1 = nn.Linear(7, 8)
         self.relu = nn.ReLU()
-        self.layer2 = nn.Linear(128, 8)
+        self.layer2 = nn.Linear(8, 16)
 
     def forward(self, x):
         x = self.layer1(x)
@@ -70,19 +66,23 @@ class FeatureExtractor(nn.Module):
 class ClassClassifier(nn.Module):
     def __init__(self, num_classes):
         super(ClassClassifier, self).__init__()
-        self.layer3 = nn.Linear(8, num_classes)
+        self.layer3 = nn.Linear(16, 32)
+        self.relu = nn.ReLU()
+        self.layer4 = nn.Linear(32, num_classes)
 
     def forward(self, x):
         x = self.layer3(x)
+        x = self.relu(x)
+        x = self.layer4(x)
         return x
 
 class DomainClassifier(nn.Module):
     def __init__(self):
         super(DomainClassifier, self).__init__()
-        self.layer4 = nn.Linear(8, 2)
+        self.layer5 = nn.Linear(16, 2)
 
     def forward(self, x):
-        x = self.layer4(x)
+        x = self.layer5(x)
         return x
 
 class GRL(torch.autograd.Function):
@@ -280,7 +280,7 @@ class DANN(nn.Module):
         print(f"Model parameters saved to {self.model_save_path}")
 
     def plot_training_results(self):
-        epochs_list = np.arange(0, len(self.total_losses), 1)
+        
         label_losses_values = [loss for loss in self.label_losses]
         val_label_losses_values = [loss for loss in self.val_label_losses]
         domain_losses_values = [loss.detach() for loss in self.domain_losses]
@@ -336,69 +336,79 @@ class DANN(nn.Module):
         else:
             print(f"Error: Model file not found at {model_path}")
 
-    def generate_predictions(self, file_path, output_path):
-        predictions = {'label': [], 'pred': []}
-        self.load_test_data(file_path)
+    def generate_predictions(self, model_path):
+        self.load_model(model_path)
+        prediction_results = {
+            'label': [],
+            'pred': []
+        }
+        # 進行預測
         with torch.no_grad():
             for test_batch, true_label_batch in self.test_loader:
-                labels_pred, _ = self.forward(test_batch)
+                labels_pred, domain_output = self.forward(test_batch)
                 _, preds = torch.max(labels_pred, 1)
-                predicted_labels = preds + 1  # 加 1 是为了将索引转换为 1 到 49 的标签
+                predicted_labels = preds + 1  # 加 1 是为了将索引转换为 1 到 41 的标签
                 label = true_label_batch + 1
-                # 將預測結果保存到 predictions 中
-                predictions['label'].extend(label.tolist())
-                predictions['pred'].extend(predicted_labels.tolist())
-
-        # 将预测结果保存为 CSV 文件
-        results = pd.DataFrame({'label': predictions['label'], 'pred': predictions['pred']})
-        results.to_csv(output_path, index=False)
+                # 將預測結果保存到 prediction_results 中
+                prediction_results['label'].extend(label.tolist())
+                prediction_results['pred'].extend(predicted_labels.tolist())
+        return pd.DataFrame(prediction_results)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train DANN Model')
     parser.add_argument('--training_source_domain_data', type=str, help='Path to the source domain data file')
     parser.add_argument('--training_target_domain_data', type=str, help='Path to the target domain data file')
-    parser.add_argument('--test', action='store_true' , help='for test')
+    parser.add_argument('--testing_data_list', nargs='+', type=str, help='List of testing data paths')
     parser.add_argument('--model_path', type=str, default='my_model.pth', help='path of .pth file of model')
-    parser.add_argument('--work_dir', type=str, default='DANN', help='create new directory to save result')
+    parser.add_argument('--work_dir', type=str, default='DANN_CORR', help='create new directory to save result')
     args = parser.parse_args()
 
-    num_classes = 49
-    epochs = 300
-    loss_weights = [1, 0]
-    unlabeled = True
+    num_classes = 41
+    epochs = 500
+    loss_weights = [1, 1]
+    unlabeled = False
     
     domain1_result = []
     domain2_result = []
     domain3_result = []
 
-    # data_drop_out_list = np.arange(0.9, 0.95, 0.1)
-    data_drop_out_list = np.array([0.0])
+    data_drop_out_list = np.arange(0.0, 0.05, 0.1)
     
     for data_drop_out in data_drop_out_list:
         # 創建 DANNModel    
         dann_model = DANN(num_classes, model_save_path=args.model_path, loss_weights=loss_weights, epochs=epochs, work_dir=f'{args.work_dir}_{data_drop_out:.1f}')
-        # summary(dann_model, (191,))
+        summary(dann_model, (7,))
         # 讀取資料
         if args.training_source_domain_data and args.training_target_domain_data:
             # 訓練模型
             dann_model.load_train_data(args.training_source_domain_data, args.training_target_domain_data, data_drop_out)
             dann_model.train(unlabeled=unlabeled)
             dann_model.plot_training_results()
-        elif args.test:
-            dann_model.load_model(args.model_path)
-            testing_file_paths = [
-                        r'D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data_reverse\2019-06-11\wireless_testing.csv',
-                        r'D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data_reverse\2019-10-09\wireless_testing.csv',
-                        r'D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data_reverse\2020-02-19\wireless_testing.csv'
-                    ]
-            output_paths = ['predictions/190611_results.csv', 'predictions/191009_results.csv', 'predictions/200219_results.csv']
-            if not os.path.exists('predictions'):
-                os.makedirs('predictions')
-            for testing_file_path, output_path in zip(testing_file_paths, output_paths):
-                dann_model.generate_predictions(testing_file_path, output_path)
+        elif args.testing_data_list:
+            testing_data_path_list = args.testing_data_list
+            for testing_data_path in testing_data_path_list:
+                for walk_str, walk_list in walk_class:
+                    prediction_results = pd.DataFrame()
+                    for walk in walk_list:
+                        # 加載數據
+                        dann_model.load_test_data(f"{testing_data_path}\\{walk}.csv")
+                        results = dann_model.generate_predictions(args.model_path)
+                        prediction_results = pd.concat([prediction_results, results], ignore_index=True)
+                    split_path = testing_data_path.split('\\')
+                    predictions_dir = f'predictions/{split_path[3]}'
+                    os.makedirs(predictions_dir, exist_ok=True)
+                    prediction_results.to_csv(os.path.join(predictions_dir, f'{walk_str}_predictions.csv'), index=False)
+            predicion_data_path_list = os.listdir('predictions/')
+            evaluator = Evaluator()
+            mde_list = evaluator.test(predicion_data_path_list, f'{args.work_dir}_{data_drop_out}')
+            domain1_result.append(mde_list[0][1])
+            domain2_result.append(mde_list[1][1])
+            domain3_result.append(mde_list[2][1])
         else:
             print('Please specify --training_source_domain_data/--training_target_domain_data or --testing_data_list option.')
 
         os.chdir('..\\..')
 
+    if args.testing_data_list:
+        plot_lines(data_drop_out_list, domain2_result, domain_name='231116', output_path=args.work_dir, title='Source_domain_to_Target_domain')
     

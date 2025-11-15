@@ -366,7 +366,7 @@ if __name__ == "__main__":
     parser.add_argument('--work_dir', type=str, default='DANN_CORR', help='create new directory to save result')
     args = parser.parse_args()
     loss_weights = [0.1, 10]
-    epoch = 100
+    epoch = 300
     unlabeled = True
     
     domain1_result = []

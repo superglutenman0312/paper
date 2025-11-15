@@ -1,29 +1,33 @@
-r'''
-python .\DANN_CORR_reverse.py --training_source_domain_data D:\Experiment\data\\UM_DSI_DB_v1.0.0_lite\data\tony_data_reverse\2020-02-19\wireless_training.csv ^
-                      --training_target_domain_data D:\Experiment\data\\UM_DSI_DB_v1.0.0_lite\data\tony_data_reverse\2019-06-11\wireless_training.csv ^
-                      --work_dir 200219_190611\\unlabeled\0.1_10
-python .\DANN_CORR_reverse.py --test --work_dir 200219_190611\\unlabeled\0.1_10
+'''
+python .\DANN_CORR.py ^
+    --training_source_domain_data D:\Experiment\data\231116\GalaxyA51\wireless_training.csv ^
+    --training_target_domain_data D:\Experiment\data\231116\GalaxyA51\wireless_training.csv ^
+    --model_path 231116_231117.pth ^
+    --work_dir 231116_231117\0.1_10
+python .\DANN_CORR.py ^
+    --testing_data_list D:\Experiment\data\231116\GalaxyA51\routes ^
+                        D:\Experiment\data\220318\GalaxyA51\routes ^
+                        D:\Experiment\data\231117\GalaxyA51\routes ^
+    --model_path 231116_231117.pth ^
+    --work_dir 231116_231117\0.1_10
 python ..\..\model_comparison\evaluator.py \
     --model_name DANN_CORR \
     --directory 220318_231116\0.1_10_0.0 \
     --source_domain 220318 \
     --target_domain 231116
 
-    
-# time reversal 1
-python DANN_CORR_reverse.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data_reverse\2020-02-19\wireless_training.csv ^
-                               --training_target_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data_reverse\2019-06-11\wireless_training.csv ^
-                               --work_dir time_reversal_1\251113_
-python DANN_CORR_reverse.py --test --work_dir time_reversal_1\251113_
-python ../evaluator.py --file 
 
-# time reversal 2
-python DANN_CORR_reverse.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data_reverse\2020-02-19\wireless_training.csv ^
-                               --training_target_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data_reverse\2019-10-09\wireless_training.csv ^
-                               --work_dir time_reversal_2\251113_
-python DANN_CORR_reverse.py --test --work_dir time_reversal_2\251113_
-python ../evaluator.py --file 
+# time variation
+python DANN_CORR.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\220318\GalaxyA51\wireless_training.csv
+                      --training_target_domain_data D:\paper_thesis\Histloc_real\Experiment\data\231116\GalaxyA51\wireless_training.csv \
+                      --work_dir time_variation\251115_
+python DANN_CORR.py --test --work_dir time_variation\251115_
 
+# spatial variation
+python DANN_CORR.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\231116\GalaxyA51\wireless_training.csv
+                      --training_target_domain_data D:\paper_thesis\Histloc_real\Experiment\data\231117\GalaxyA51\wireless_training.csv \
+                      --work_dir spatial_variation\251115_
+python DANN_CORR.py --test --work_dir spatial_variation\251115_
 '''
 import torch
 import torch.nn as nn
@@ -40,6 +44,11 @@ import cv2
 import argparse
 import os
 import sys
+# sys.path.append('..\\..\\model_comparison')
+# from walk_definitions import walk_class
+# from evaluator import Evaluator
+# sys.path.append('..\\model_comparison')
+# from drop_out_plot import plot_lines
 
 class FeatureExtractor(nn.Module):
     def __init__(self, input_size, hidden_size1, hidden_size2):
@@ -57,10 +66,13 @@ class FeatureExtractor(nn.Module):
 class LabelPredictor(nn.Module):
     def __init__(self, input_size, num_classes):
         super(LabelPredictor, self).__init__()
-        self.fc1 = nn.Linear(64, num_classes)
+        self.fc1 = nn.Linear(input_size, 32)
+        self.fc2 = nn.Linear(32, num_classes)
 
     def forward(self, x):
         x = self.fc1(x)
+        x = torch.relu(x)
+        x = self.fc2(x)
         return x
 
 class DomainAdaptationModel(nn.Module):
@@ -94,8 +106,8 @@ class HistCorrDANNModel:
         self.batch_size = 32
         self.loss_weights = loss_weights
         self.lr = lr
-        self.input_size = 191
-        self.feature_extractor_neurons = [128, 64]
+        self.input_size = 7
+        self.feature_extractor_neurons = [8, 16]
 
         self._initialize_model()
         self._initialize_optimizer()
@@ -135,7 +147,7 @@ class HistCorrDANNModel:
 
     def _initialize_model(self):
         self.feature_extractor = FeatureExtractor(self.input_size, self.feature_extractor_neurons[0], self.feature_extractor_neurons[1])
-        self.label_predictor = LabelPredictor(self.feature_extractor_neurons[1], num_classes=49)
+        self.label_predictor = LabelPredictor(self.feature_extractor_neurons[1], num_classes=41)
         self.domain_adaptation_model = DomainAdaptationModel(self.feature_extractor, self.label_predictor)
 
     def _initialize_optimizer(self):
@@ -282,7 +294,7 @@ class HistCorrDANNModel:
 
     def save_model_architecture(self, file_path='model_architecture'):
         # Create a dummy input for visualization
-        dummy_input = torch.randn(1, 191)  # Assuming input size is (batch_size, 7)
+        dummy_input = torch.randn(1, 7)  # Assuming input size is (batch_size, 7)
 
         # Generate a graph of the model architecture
         # graph = make_dot(self.domain_adaptation_model(dummy_input), params=dict(self.domain_adaptation_model.named_parameters()))
@@ -303,41 +315,72 @@ class HistCorrDANNModel:
             features, labels_pred = self.domain_adaptation_model(features)
         return labels_pred
 
+    # def generate_predictions(self, file_path, output_path):
+    #     predictions = {'label': [], 'pred': []}
+    #     self.load_test_data(file_path)
+    #     # 進行預測
+    #     self.domain_adaptation_model.eval()
+    #     with torch.no_grad():
+    #         for test_batch, true_label_batch in self.test_loader:
+    #             features, labels_pred = self.domain_adaptation_model(test_batch)
+    #             _, preds = torch.max(labels_pred, 1)
+    #             predicted_labels = preds + 1  # 加 1 是为了将索引转换为 1 到 41 的标签
+    #             label = true_label_batch + 1
+    #             # 將預測結果保存到 prediction_results 中
+    #             prediction_results['label'].extend(label.tolist())
+    #             prediction_results['pred'].extend(predicted_labels.tolist())
+    #     return pd.DataFrame(prediction_results)
+
     def generate_predictions(self, file_path, output_path):
+        # 1. 建立儲存結果的字典
         predictions = {'label': [], 'pred': []}
+        
+        # 2. 根據傳入的 file_path 載入測試資料 (這會更新 self.test_loader)
         self.load_test_data(file_path)
+        
+        # 3. 進行預測 (模型已在 `elif args.test:` 區塊載入)
+        self.domain_adaptation_model.eval()
         with torch.no_grad():
+            # 4. 疊代剛載入的 self.test_loader
             for test_batch, true_label_batch in self.test_loader:
+                
+                # 5. 呼叫 predict 方法 (這和 reverse.py 的做法一致)
                 labels_pred = self.predict(test_batch)
+                
+                # 6. 處理標籤 (保留 DANN_CORR.py 原本的邏輯)
                 _, preds = torch.max(labels_pred, 1)
-                predicted_labels = preds + 1  # 加 1 是为了将索引转换为 1 到 49 的标签
+                predicted_labels = preds + 1  # 加 1 是为了将索引转换为 1 到 41 的标签
                 label = true_label_batch + 1
-                # 將預測結果保存到 predictions 中
+                
+                # 7. 將預測結果保存到 predictions 中
                 predictions['label'].extend(label.tolist())
                 predictions['pred'].extend(predicted_labels.tolist())
-        # 将预测结果保存为 CSV 文件
-        results = pd.DataFrame({'label': predictions['label'], 'pred': predictions['pred']})
+        
+        # 8. 将预测结果保存为 CSV 文件 (不再 return)
+        results = pd.DataFrame(predictions)
         results.to_csv(output_path, index=False)
+        print(f"Predictions successfully saved to {output_path}") # (可選) 增加提示
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train DANN Model')
     parser.add_argument('--training_source_domain_data', type=str, help='Path to the source domain data file')
     parser.add_argument('--training_target_domain_data', type=str, help='Path to the target domain data file')
     parser.add_argument('--test', action='store_true' , help='for test')
+    # parser.add_argument('--testing_data_list', nargs='+', type=str, help='List of testing data paths')
     parser.add_argument('--model_path', type=str, default='my_model.pth', help='path of .pth file of model')
     parser.add_argument('--work_dir', type=str, default='DANN_CORR', help='create new directory to save result')
     args = parser.parse_args()
     loss_weights = [0.1, 10]
-    epoch = 300
+    epoch = 500
     unlabeled = True
     
     domain1_result = []
     domain2_result = []
     domain3_result = []
 
-    # data_drop_out_list = np.arange(0.0, 0.05, 0.1)
+    # data_drop_out_list = np.arange(0.9, 0.95, 0.1)
     data_drop_out_list = np.array([0.0])
-
+    
     for data_drop_out in data_drop_out_list:
         # 創建 DANNModel    
         dann_model = HistCorrDANNModel(model_save_path=args.model_path, loss_weights=loss_weights, work_dir=f'{args.work_dir}_{data_drop_out:.1f}')
@@ -351,11 +394,11 @@ if __name__ == "__main__":
         elif args.test:
             dann_model.load_model(args.model_path)
             testing_file_paths = [
-                        r'D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data_reverse\2019-06-11\wireless_testing.csv',
-                        r'D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data_reverse\2019-10-09\wireless_testing.csv',
-                        r'D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data_reverse\2020-02-19\wireless_testing.csv'
+                        r'D:\paper_thesis\Histloc_real\Experiment\data\220318\GalaxyA51\wireless_testing.csv',
+                        r'D:\paper_thesis\Histloc_real\Experiment\data\231116\GalaxyA51\wireless_testing.csv',
+                        r'D:\paper_thesis\Histloc_real\Experiment\data\231117\GalaxyA51\wireless_testing.csv'
                     ]
-            output_paths = ['predictions/190611_results.csv', 'predictions/191009_results.csv', 'predictions/200219_results.csv']
+            output_paths = ['predictions/220318_results.csv', 'predictions/231116_results.csv', 'predictions/231117_results.csv']
             if not os.path.exists('predictions'):
                 os.makedirs('predictions')
             for testing_file_path, output_path in zip(testing_file_paths, output_paths):
