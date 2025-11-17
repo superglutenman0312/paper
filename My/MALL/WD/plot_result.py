@@ -139,7 +139,7 @@ def main():
     MODES = ['labeled', 'unlabeled']
     ALPHAS = [0.1, 1.0, 10.0]
     BETAS = [0.1, 1.0, 10.0]
-    EPOCH = 5 
+    EPOCH = 100
     
     # !! 重要 !!
     # 這裡的 'SOURCE_FILE_TAG' 和 'TARGET_FILE_TAG' 

@@ -132,7 +132,7 @@ def main():
     MODES = ['labeled', 'unlabeled']
     ALPHAS = [0.1, 1.0, 10.0]
     BETAS = [0.1, 1.0, 10.0]
-    EPOCH = 1
+    EPOCH = 100
     
     if EXPERIMENT_TYPE == 'time_variation_1':
         SOURCE_FILE_TAG = '190611' # 假設 source tag 不變

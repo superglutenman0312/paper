@@ -137,7 +137,7 @@ def main():
     MODES = ['labeled', 'unlabeled']
     ALPHAS = [0.1, 1.0, 10.0]
     BETAS = [0.1, 1.0, 10.0]
-    EPOCH = 5 # 根據您的 ps1 腳本
+    EPOCH = 500 # 根據您的 ps1 腳本
     
     # 根據實驗類型，設定要抓取的 "Source" 和 "Target" 檔案
     if EXPERIMENT_TYPE == 'time_variation':

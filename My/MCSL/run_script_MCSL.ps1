@@ -5,7 +5,7 @@ Write-Host "[INFO] PowerShell loop experiment starting..." -ForegroundColor Gree
 # ---------------------------------
 # 1. Set shared parameters
 # ---------------------------------
-$EpochNum = 5
+$EpochNum = 500
 $LossValues = @(0.1, 1, 10) # PowerShell Array
 
 # ---------------------------------
