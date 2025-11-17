@@ -1,4 +1,3 @@
-# parent.ps1
 # [Before Use]: Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
 Write-Host "[Parent] Calling Child Script..."

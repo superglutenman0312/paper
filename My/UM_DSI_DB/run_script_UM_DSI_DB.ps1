@@ -1,5 +1,9 @@
 # [Before Use]: Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 
+# 將工作目錄 (CWD) 設定為目前腳本所在的目錄
+Set-Location $PSScriptRoot
+Write-Host "[INFO] CWD has been set to: $(Get-Location)" -ForegroundColor Gray
+
 Write-Host "[INFO] PowerShell loop experiment starting..." -ForegroundColor Green
 
 # ---------------------------------
@@ -72,4 +76,4 @@ Write-Host "" # Newline
 Write-Host "[INFO] End... All experiments finished." -ForegroundColor Green
 
 # Use a pure English prompt
-Read-Host "Press Enter to exit..."
+# Read-Host "Press Enter to exit..."
