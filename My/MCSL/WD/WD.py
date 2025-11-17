@@ -1,33 +1,19 @@
 '''
-python .\DANN_CORR.py ^
-    --training_source_domain_data D:\Experiment\data\231116\GalaxyA51\wireless_training.csv ^
-    --training_target_domain_data D:\Experiment\data\231116\GalaxyA51\wireless_training.csv ^
-    --model_path 231116_231117.pth ^
-    --work_dir 231116_231117\0.1_10
-python .\DANN_CORR.py ^
-    --testing_data_list D:\Experiment\data\231116\GalaxyA51\routes ^
-                        D:\Experiment\data\220318\GalaxyA51\routes ^
-                        D:\Experiment\data\231117\GalaxyA51\routes ^
-    --model_path 231116_231117.pth ^
-    --work_dir 231116_231117\0.1_10
-python ..\..\model_comparison\evaluator.py \
-    --model_name DANN_CORR \
-    --directory 220318_231116\0.1_10_0.0 \
-    --source_domain 220318 \
-    --target_domain 231116
-
-
 # time variation
-python WD.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\220318\GalaxyA51\wireless_training.csv
-                      --training_target_domain_data D:\paper_thesis\Histloc_real\Experiment\data\231116\GalaxyA51\wireless_training.csv \
-                      --work_dir time_variation\251115_
-python WD.py --test --work_dir time_variation\251115_
+python WD.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\220318\GalaxyA51\wireless_training.csv `
+             --training_target_domain_data D:\paper_thesis\Histloc_real\Experiment\data\231116\GalaxyA51\wireless_training.csv `
+             --work_dir time_variation `
+             --loss_weights 0.1 10 --epoch 5 --unlabeled
+python WD.py --test --work_dir time_variation `
+             --loss_weights 0.1 10 --epoch 5 --unlabeled
 
 # spatial variation
-python WD.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\231116\GalaxyA51\wireless_training.csv
-                      --training_target_domain_data D:\paper_thesis\Histloc_real\Experiment\data\231117\GalaxyA51\wireless_training.csv \
-                      --work_dir spatial_variation\251115_
-python WD.py --test --work_dir spatial_variation\251115_
+python WD.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\231116\GalaxyA51\wireless_training.csv `
+             --training_target_domain_data D:\paper_thesis\Histloc_real\Experiment\data\231117\GalaxyA51\wireless_training.csv `
+             --work_dir spatial_variation `
+             --loss_weights 0.1 10 --epoch 20 --unlabeled
+python WD.py --test --work_dir spatial_variation `
+             --loss_weights 0.1 10 --epoch 20 --unlabeled
 '''
 import torch
 import torch.nn as nn
@@ -36,7 +22,6 @@ import math
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 import matplotlib.pyplot as plt
-# from torchviz import make_dot
 from sklearn.model_selection import train_test_split
 import numpy as np
 import pandas as pd
@@ -44,11 +29,6 @@ import cv2
 import argparse
 import os
 import sys
-# sys.path.append('..\\..\\model_comparison')
-# from walk_definitions import walk_class
-# from evaluator import Evaluator
-# sys.path.append('..\\model_comparison')
-# from drop_out_plot import plot_lines
 
 class FeatureExtractor(nn.Module):
     def __init__(self, input_size, hidden_size1, hidden_size2):
@@ -394,30 +374,40 @@ if __name__ == "__main__":
     parser.add_argument('--training_source_domain_data', type=str, help='Path to the source domain data file')
     parser.add_argument('--training_target_domain_data', type=str, help='Path to the target domain data file')
     parser.add_argument('--test', action='store_true' , help='for test')
-    # parser.add_argument('--testing_data_list', nargs='+', type=str, help='List of testing data paths')
     parser.add_argument('--model_path', type=str, default='my_model.pth', help='path of .pth file of model')
     parser.add_argument('--work_dir', type=str, default='DANN_CORR', help='create new directory to save result')
+    parser.add_argument('--loss_weights', type=float, nargs=2, default=[0.1, 10.0], help='loss weights for domain and label predictors')
+    parser.add_argument('--epoch', type=int, default=500, help='number of training epochs')
+    parser.add_argument('--unlabeled', action='store_true', help='use unlabeled data from target domain during training')
     args = parser.parse_args()
-    loss_weights = [0.1, 10]
-    epoch = 500
-    unlabeled = True
+    
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    loss_str = f'{args.loss_weights[0]}_{args.loss_weights[1]}'
+    epoch_str = f'{args.epoch}'
+    status_str = 'unlabeled' if args.unlabeled else 'labeled'
+    folder_name = f'{loss_str}_{epoch_str}_{status_str}'
+    work_dir = os.path.join(script_dir, args.work_dir, folder_name)
+    
+    if args.unlabeled:
+        data_drop_out_list = np.array([0.0])
+    else:
+        data_drop_out_list = np.array([0.9])
     
     domain1_result = []
     domain2_result = []
     domain3_result = []
 
     # data_drop_out_list = np.arange(0.9, 0.95, 0.1)
-    data_drop_out_list = np.array([0.0])
     
     for data_drop_out in data_drop_out_list:
         # 創建 DANNModel    
-        dann_model = HistCorrDANNModel(model_save_path=args.model_path, loss_weights=loss_weights, work_dir=f'{args.work_dir}_{data_drop_out:.1f}')
+        dann_model = HistCorrDANNModel(model_save_path=args.model_path, loss_weights=args.loss_weights, work_dir=work_dir)
         dann_model.save_model_architecture()
         # 讀取資料
         if args.training_source_domain_data and args.training_target_domain_data:
             # 訓練模型
             dann_model.load_train_data(args.training_source_domain_data, args.training_target_domain_data, data_drop_out)
-            dann_model.train(num_epochs=epoch, unlabeled=unlabeled)
+            dann_model.train(num_epochs=args.epoch, unlabeled=args.unlabeled)
             dann_model.plot_training_results()
         elif args.test:
             dann_model.load_model(args.model_path)
