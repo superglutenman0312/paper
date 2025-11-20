@@ -7,7 +7,7 @@ import os
 # --- 1. 設定 'label_map.pkl' 的路徑 ---
 # (請根據您的 'label_map.pkl' 檔案實際位置修改此路徑)
 # 根據您的 DANN_CORR_MALL.py 指令，我猜測您的 mall_data 資料夾在 'Histloc_try' 內
-LABEL_MAP_PATH = 'D:/paper_thesis/Histloc_try/data/MTLocData/Mall/label_map.pkl' 
+LABEL_MAP_PATH = 'D:/paper_thesis/My/data/MTLocData/Mall/label_map.pkl' 
 
 # --- 2. 載入並反轉座標/標籤對照表 ---
 try:

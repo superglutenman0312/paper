@@ -45,26 +45,26 @@ foreach ($Mode in @("labeled", "unlabeled")) {
             
             # Time Variation 1 (Train)
             Write-Host "[$Mode]: Training Time Variation ($Alpha, $Beta)..."
-            python .\WD\WD.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2019-06-11\wireless_training.csv `
+            python .\SWD\SWD.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2019-06-11\wireless_training.csv `
                               --training_target_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2019-10-09\wireless_training.csv `
                               --work_dir time_variation_1 `
                               --loss_weights $Alpha $Beta --epoch $EpochNum $Flag
             
             # Time Variation 1 (Test)
             Write-Host "[$Mode]: Testing Time Variation ($Alpha, $Beta)..."
-            python .\WD\WD.py --test --work_dir time_variation_1 `
+            python .\SWD\SWD.py --test --work_dir time_variation_1 `
                               --loss_weights $Alpha $Beta --epoch $EpochNum $Flag
 
             # Time Variation 2 (Train)
             Write-Host "[$Mode]: Training Spatial Variation ($Alpha, $Beta)..."
-            python .\WD\WD.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2019-06-11\wireless_training.csv `
+            python .\SWD\SWD.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2019-06-11\wireless_training.csv `
                               --training_target_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2020-02-19\wireless_training.csv `
                               --work_dir time_variation_2 `
                               --loss_weights $Alpha $Beta --epoch $EpochNum $Flag
             
             # Time Variation 2 (Test)
             Write-Host "[$Mode]: Testing Spatial Variation ($Alpha, $Beta)..."
-            python .\WD\WD.py --test --work_dir time_variation_2 `
+            python .\SWD\SWD.py --test --work_dir time_variation_2 `
                               --loss_weights $Alpha $Beta --epoch $EpochNum $Flag
             
             Write-Host "-------------------------------------------------" -ForegroundColor Yellow

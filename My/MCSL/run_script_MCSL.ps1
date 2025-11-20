@@ -15,8 +15,8 @@ $LossValues = @(0.1, 1, 10) # PowerShell Array
 # ---------------------------------
 # 2. Outer loop: (unlabeled / labeled)
 # ---------------------------------
-foreach ($Mode in @("labeled", "unlabeled")) {
-
+# foreach ($Mode in @("labeled", "unlabeled")) {
+foreach ($Mode in @("unlabeled")) {
     # Set the python flag based on the $Mode
     $Flag = ""
     if ($Mode -eq "unlabeled") {
@@ -45,26 +45,26 @@ foreach ($Mode in @("labeled", "unlabeled")) {
             
             # Time Variation (Train)
             Write-Host "[$Mode]: Training Time Variation ($Alpha, $Beta)..."
-            python .\WD\WD.py --training_source_domain_data D:/paper_thesis/Histloc_real/Experiment/data/220318/GalaxyA51/wireless_training.csv `
+            python .\SWD\SWD.py --training_source_domain_data D:/paper_thesis/Histloc_real/Experiment/data/220318/GalaxyA51/wireless_training.csv `
                                   --training_target_domain_data D:/paper_thesis/Histloc_real/Experiment/data/231116/GalaxyA51/wireless_training.csv `
                                   --work_dir time_variation `
                                   --loss_weights $Alpha $Beta --epoch $EpochNum $Flag
             
             # Time Variation (Test)
             Write-Host "[$Mode]: Testing Time Variation ($Alpha, $Beta)..."
-            python .\WD\WD.py --test --work_dir time_variation `
+            python .\SWD\SWD.py --test --work_dir time_variation `
                                   --loss_weights $Alpha $Beta --epoch $EpochNum $Flag
 
             # Spatial Variation (Train)
             Write-Host "[$Mode]: Training Spatial Variation ($Alpha, $Beta)..."
-            python .\WD\WD.py --training_source_domain_data D:/paper_thesis/Histloc_real/Experiment/data/231116/GalaxyA51/wireless_training.csv `
+            python .\SWD\SWD.py --training_source_domain_data D:/paper_thesis/Histloc_real/Experiment/data/231116/GalaxyA51/wireless_training.csv `
                                   --training_target_domain_data D:/paper_thesis/Histloc_real/Experiment/data/231117/GalaxyA51/wireless_training.csv `
                                   --work_dir spatial_variation `
                                   --loss_weights $Alpha $Beta --epoch $EpochNum $Flag
             
             # Spatial Variation (Test)
             Write-Host "[$Mode]: Testing Spatial Variation ($Alpha, $Beta)..."
-            python .\WD\WD.py --test --work_dir spatial_variation `
+            python .\SWD\SWD.py --test --work_dir spatial_variation `
                                   --loss_weights $Alpha $Beta --epoch $EpochNum $Flag
                                   
             Write-Host "-------------------------------------------------" -ForegroundColor Yellow

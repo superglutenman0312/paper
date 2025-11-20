@@ -127,7 +127,7 @@ def plot_mde_chart(df, mode, experiment_name, output_filename):
 def main():
     
     # --- (可修改) 參數設定 ---
-    EXPERIMENT_TYPE = ['time_reversal_1', 'time_reversal_2'][1]  # 選擇 'time_variation' 或 'spatial_variation'
+    EXPERIMENT_TYPE = ['time_reversal_1', 'time_reversal_2'][0]  # 選擇 'time_variation' 或 'spatial_variation'
     
     MODES = ['labeled', 'unlabeled']
     ALPHAS = [0.1, 1.0, 10.0]

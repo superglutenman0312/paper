@@ -7,7 +7,7 @@ Write-Host "[INFO] CWD has been set to: $(Get-Location)" -ForegroundColor Gray
 Write-Host "[INFO] PowerShell loop experiment starting..." -ForegroundColor Green
 
 # ---------------------------------
-# 1. Set shared parameters
+# 1. Set shared parameters 
 # ---------------------------------
 $EpochNum = 100
 $LossValues = @(0.1, 1, 10) # PowerShell Array
@@ -45,14 +45,14 @@ foreach ($Mode in @("labeled", "unlabeled")) {
             
             # (Train)
             Write-Host "[$Mode]: Training Time Variation ($Alpha, $Beta)..."
-            python .\WD\WD.py --training_source_domain_data D:/paper_thesis/My/data/MTLocData/Mall/2021-11-20/wireless_training.csv `
+            python .\SWD\SWD.py --training_source_domain_data D:/paper_thesis/My/data/MTLocData/Mall/2021-11-20/wireless_training.csv `
                               --training_target_domain_data D:/paper_thesis/My/data/MTLocData/Mall/2022-12-21/wireless_training.csv `
                               --work_dir experiments `
                               --loss_weights $Alpha $Beta --epoch $EpochNum $Flag
             
             # (Test)
             Write-Host "[$Mode]: Testing Time Variation ($Alpha, $Beta)..."
-            python .\WD\WD.py --test --work_dir experiments `
+            python .\SWD\SWD.py --test --work_dir experiments `
                               --loss_weights $Alpha $Beta --epoch $EpochNum $Flag
             
             Write-Host "-------------------------------------------------" -ForegroundColor Yellow
