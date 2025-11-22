@@ -1,18 +1,19 @@
-'''
-# time variation
-python DANN_CORR_GEMINI.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\220318\GalaxyA51\wireless_training.csv `
-                      --training_target_domain_data D:\paper_thesis\Histloc_real\Experiment\data\231116\GalaxyA51\wireless_training.csv `
-                      --work_dir time_variation `
-                      --random_seed 42 --unlabeled 
-python DANN_CORR_GEMINI.py --test --work_dir time_variation `
+r'''
+# time variation 1
+python DANN_CORR.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2019-06-11\wireless_training.csv `
+                      --training_target_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2019-10-09\wireless_training.csv `
+                      --work_dir time_variation_1/251113_labeled `
                       --random_seed 42 --unlabeled
-# spatial variation
-python DANN_CORR_GEMINI.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\231116\GalaxyA51\wireless_training.csv `
-                      --training_target_domain_data D:\paper_thesis\Histloc_real\Experiment\data\231117\GalaxyA51\wireless_training.csv `
-                      --work_dir spatial_variation `
-                      --random_seed 42 --unlabeled 
-python DANN_CORR_GEMINI.py --test --work_dir spatial_variation `
-                      --random_seed 42 --unlabeled
+python DANN_CORR.py --test --work_dir time_variation_1/251113_labeled `
+                       --random_seed 42 --unlabeled
+
+# time variation 2
+python DANN_CORR.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2019-06-11\wireless_training.csv `
+                      --training_target_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2020-02-19\wireless_training.csv `
+                      --work_dir time_variation_2/251113_labeled `
+                        --random_seed 42 --unlabeled
+python DANN_CORR.py --test --work_dir time_variation_2/251113_labeled `
+                        --random_seed 42 --unlabeled
 '''
 import torch
 import torch.nn as nn
@@ -61,13 +62,10 @@ class FeatureExtractor(nn.Module):
 class LabelPredictor(nn.Module):
     def __init__(self, input_size, num_classes):
         super(LabelPredictor, self).__init__()
-        self.fc1 = nn.Linear(input_size, 32)
-        self.fc2 = nn.Linear(32, num_classes)
+        self.fc1 = nn.Linear(64, num_classes)
 
     def forward(self, x):
         x = self.fc1(x)
-        x = torch.relu(x)
-        x = self.fc2(x)
         return x
 
 class DomainAdaptationModel(nn.Module):
@@ -101,8 +99,8 @@ class HistCorrDANNModel:
         self.batch_size = 32
         self.loss_weights = loss_weights
         self.lr = lr
-        self.input_size = 7
-        self.feature_extractor_neurons = [8, 16]
+        self.input_size = 168
+        self.feature_extractor_neurons = [128, 64]
 
         self._initialize_model()
         self._initialize_optimizer()
@@ -142,7 +140,7 @@ class HistCorrDANNModel:
 
     def _initialize_model(self):
         self.feature_extractor = FeatureExtractor(self.input_size, self.feature_extractor_neurons[0], self.feature_extractor_neurons[1])
-        self.label_predictor = LabelPredictor(self.feature_extractor_neurons[1], num_classes=41)
+        self.label_predictor = LabelPredictor(self.feature_extractor_neurons[1], num_classes=49)
         self.domain_adaptation_model = DomainAdaptationModel(self.feature_extractor, self.label_predictor)
 
     def _initialize_optimizer(self):
@@ -155,47 +153,9 @@ class HistCorrDANNModel:
         self.val_total_losses, self.val_label_losses, self.val_domain_losses = [], [], []
         self.val_source_accuracies, self.val_target_accuracies, self.val_total_accuracies = [], [], []
 
-    # def domain_invariance_loss(self, source_hist, target_hist):
-    #     correlation = cv2.compareHist(source_hist, target_hist, cv2.HISTCMP_CORREL)
-    #     return 1 - correlation
-    
-    def domain_invariance_loss(self, source_features, target_features):
-        """
-        計算可微分的 domain loss (1 - Correlation)。
-        1. 使用 torch.histc (可微分) 替換 cv2.calcHist。
-        2. 使用 PyTorch 運算實現 Pearson 相關係數 (論文 Eq 3.9) 
-           以替換 cv2.compareHist。
-        """
-        
-        # 1. 計算直方圖 (Histogram) - 使用 PyTorch
-        # 論文 和原始碼 均使用 100 bins, 範圍 [0, 1]
-        source_hist = torch.histc(source_features.flatten(), bins=100, min=0.0, max=1.0)
-        target_hist = torch.histc(target_features.flatten(), bins=100, min=0.0, max=1.0)
-
-        # 2. 計算 Pearson 相關係數 (Correlation) - 使用 PyTorch
-        # 這是論文 Eq 3.9 的 PyTorch 實現
-        
-        # H_S 和 H_T
-        x = source_hist
-        y = target_hist
-        
-        # H_S bar 和 H_T bar (平均值)
-        vx = x - torch.mean(x)
-        vy = y - torch.mean(y)
-        
-        # 分子: sum((H_S - H_S_bar) * (H_T - H_T_bar))
-        numerator = torch.sum(vx * vy)
-        
-        # 分母: sqrt(sum((H_S - H_S_bar)^2) * sum((H_T - H_T_bar)^2))
-        # 加上一個極小值 (epsilon) 避免開根號或除以 0
-        epsilon = 1e-10
-        denominator = torch.sqrt(torch.sum(vx ** 2) * torch.sum(vy ** 2)) + epsilon
-        
-        correlation = numerator / denominator
-        
-        # 3. 返回 Loss
-        # 論文 和原始碼 的 loss 均為 1 - Corr
-        return 1.0 - correlation
+    def domain_invariance_loss(self, source_hist, target_hist):
+        correlation = cv2.compareHist(source_hist, target_hist, cv2.HISTCMP_CORREL)
+        return 1 - correlation
 
     def train(self, num_epochs=10, unlabeled=False):
         unlabeled = unlabeled
@@ -253,9 +213,9 @@ class HistCorrDANNModel:
             else:
                 label_loss = (label_loss_source + label_loss_target) / 2
 
-            # source_hist = cv2.calcHist([source_features.detach().numpy().flatten()], [0], None, [100], [0, 1])
-            # target_hist = cv2.calcHist([target_features.detach().numpy().flatten()], [0], None, [100], [0, 1])
-            domain_loss = self.domain_invariance_loss(source_features, target_features)
+            source_hist = cv2.calcHist([source_features.detach().numpy().flatten()], [0], None, [100], [0, 1])
+            target_hist = cv2.calcHist([target_features.detach().numpy().flatten()], [0], None, [100], [0, 1])
+            domain_loss = self.domain_invariance_loss(source_hist, target_hist)
 
             total_loss = self.loss_weights[0] * label_loss + self.loss_weights[1] * domain_loss
 
@@ -327,7 +287,7 @@ class HistCorrDANNModel:
 
     def save_model_architecture(self, file_path='model_architecture'):
         # Create a dummy input for visualization
-        dummy_input = torch.randn(1, 7)  # Assuming input size is (batch_size, 7)
+        dummy_input = torch.randn(1, 168)  # Assuming input size is (batch_size, 7)
 
         # Generate a graph of the model architecture
         # graph = make_dot(self.domain_adaptation_model(dummy_input), params=dict(self.domain_adaptation_model.named_parameters()))
@@ -348,51 +308,21 @@ class HistCorrDANNModel:
             features, labels_pred = self.domain_adaptation_model(features)
         return labels_pred
 
-    # def generate_predictions(self, file_path, output_path):
-    #     predictions = {'label': [], 'pred': []}
-    #     self.load_test_data(file_path)
-    #     # 進行預測
-    #     self.domain_adaptation_model.eval()
-    #     with torch.no_grad():
-    #         for test_batch, true_label_batch in self.test_loader:
-    #             features, labels_pred = self.domain_adaptation_model(test_batch)
-    #             _, preds = torch.max(labels_pred, 1)
-    #             predicted_labels = preds + 1  # 加 1 是为了将索引转换为 1 到 41 的标签
-    #             label = true_label_batch + 1
-    #             # 將預測結果保存到 prediction_results 中
-    #             prediction_results['label'].extend(label.tolist())
-    #             prediction_results['pred'].extend(predicted_labels.tolist())
-    #     return pd.DataFrame(prediction_results)
-
     def generate_predictions(self, file_path, output_path):
-        # 1. 建立儲存結果的字典
         predictions = {'label': [], 'pred': []}
-        
-        # 2. 根據傳入的 file_path 載入測試資料 (這會更新 self.test_loader)
         self.load_test_data(file_path)
-        
-        # 3. 進行預測 (模型已在 `elif args.test:` 區塊載入)
-        self.domain_adaptation_model.eval()
         with torch.no_grad():
-            # 4. 疊代剛載入的 self.test_loader
             for test_batch, true_label_batch in self.test_loader:
-                
-                # 5. 呼叫 predict 方法 (這和 reverse.py 的做法一致)
                 labels_pred = self.predict(test_batch)
-                
-                # 6. 處理標籤 (保留 DANN_CORR.py 原本的邏輯)
                 _, preds = torch.max(labels_pred, 1)
-                predicted_labels = preds + 1  # 加 1 是为了将索引转换为 1 到 41 的标签
+                predicted_labels = preds + 1  # 加 1 是为了将索引转换为 1 到 49 的标签
                 label = true_label_batch + 1
-                
-                # 7. 將預測結果保存到 predictions 中
+                # 將預測結果保存到 predictions 中
                 predictions['label'].extend(label.tolist())
                 predictions['pred'].extend(predicted_labels.tolist())
-        
-        # 8. 将预测结果保存为 CSV 文件 (不再 return)
-        results = pd.DataFrame(predictions)
+        # 将预测结果保存为 CSV 文件
+        results = pd.DataFrame({'label': predictions['label'], 'pred': predictions['pred']})
         results.to_csv(output_path, index=False)
-        print(f"Predictions successfully saved to {output_path}") # (可選) 增加提示
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train DANN Model')
@@ -401,8 +331,8 @@ if __name__ == "__main__":
     parser.add_argument('--test', action='store_true' , help='for test')
     parser.add_argument('--model_path', type=str, default='my_model.pth', help='path of .pth file of model')
     parser.add_argument('--work_dir', type=str, default='DANN_CORR', help='create new directory to save result')
-    parser.add_argument('--loss_weights', type=float, nargs=2, default=[0.1, 10.0], help='loss weights for domain and label predictors')
-    parser.add_argument('--epoch', type=int, default=500, help='number of training epochs')
+    parser.add_argument('--loss_weights', type=float, nargs=2, default=[1.0, 0.0], help='loss weights for domain and label predictors')
+    parser.add_argument('--epoch', type=int, default=100, help='number of training epochs')
     parser.add_argument('--unlabeled', action='store_true', help='use unlabeled data from target domain during training')
     parser.add_argument('--random_seed', type=int, default=42, help='random seed for reproducibility')
     args = parser.parse_args()
@@ -415,7 +345,7 @@ if __name__ == "__main__":
     status_str = 'unlabeled' if args.unlabeled else 'labeled'
     folder_name = f'{loss_str}_{epoch_str}_{status_str}'
     work_dir = os.path.join(script_dir, args.work_dir, f'random_seed_{seed}', folder_name)
-
+    
     if args.unlabeled:
         data_drop_out_list = np.array([0.0])
     else:
@@ -426,7 +356,7 @@ if __name__ == "__main__":
     domain3_result = []
 
     # data_drop_out_list = np.arange(0.9, 0.95, 0.1)
-    
+
     for data_drop_out in data_drop_out_list:
         # 創建 DANNModel    
         dann_model = HistCorrDANNModel(model_save_path=args.model_path, loss_weights=args.loss_weights, work_dir=work_dir)
@@ -440,11 +370,11 @@ if __name__ == "__main__":
         elif args.test:
             dann_model.load_model(args.model_path)
             testing_file_paths = [
-                        r'D:\paper_thesis\Histloc_real\Experiment\data\220318\GalaxyA51\wireless_testing.csv',
-                        r'D:\paper_thesis\Histloc_real\Experiment\data\231116\GalaxyA51\wireless_testing.csv',
-                        r'D:\paper_thesis\Histloc_real\Experiment\data\231117\GalaxyA51\wireless_testing.csv'
+                        r'D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2019-06-11\wireless_testing.csv',
+                        r'D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2019-10-09\wireless_testing.csv',
+                        r'D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2020-02-19\wireless_testing.csv'
                     ]
-            output_paths = ['predictions/220318_results.csv', 'predictions/231116_results.csv', 'predictions/231117_results.csv']
+            output_paths = ['predictions/190611_results.csv', 'predictions/191009_results.csv', 'predictions/200219_results.csv']
             if not os.path.exists('predictions'):
                 os.makedirs('predictions')
             for testing_file_path, output_path in zip(testing_file_paths, output_paths):

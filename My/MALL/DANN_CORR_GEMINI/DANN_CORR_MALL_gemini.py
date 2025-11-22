@@ -1,12 +1,10 @@
 '''
-python .\DANN_CORR.py --training_source_domain_data D:\Experiment\data\MTLocData\Mall\2021-11-20\wireless_training.csv ^
-                --training_target_domain_data D:\Experiment\data\MTLocData\Mall\2022-12-21\wireless_training.csv ^
-                --work_dir 211120_221221\\unlabeled\0.1_10
-python DANN_CORR.py --test --work_dir 211120_221221\\unlabeled\0.1_10
-
-python DANN_CORR_MALL_gemini.py --training_source_domain_data "D:/paper_thesis/Histloc_try/data/MTLocData/Mall/2021-11-20/wireless_training.csv" --training_target_domain_data "D:/paper_thesis/Histloc_try/data/MTLocData/Mall/2022-12-21/wireless_training.csv" --work_dir "test_251104"
-python DANN_CORR_MALL_gemini.py --test --work_dir "test_251104"
-python ../evaluator.py --file 
+python DANN_CORR_MALL_gemini.py --training_source_domain_data D:/paper_thesis/My/data/MTLocData/Mall/2021-11-20/wireless_training.csv `
+                       --training_target_domain_data D:/paper_thesis/My/data/MTLocData/Mall/2022-12-21/wireless_training.csv `
+                       --work_dir experiments `
+                       --random_seed 42 --unlabeled
+python DANN_CORR_MALL_gemini.py --test --work_dir experiments `
+                       --random_seed 42 --unlabeled
 '''
 import torch
 import torch.nn as nn
@@ -23,6 +21,21 @@ import cv2
 import argparse
 import os
 import sys
+import random
+
+def set_seed(seed=42):
+    """
+    固定所有隨機種子，確保實驗可重現。
+    """
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    # 為了絕對的一致性，犧牲一點效能（選擇性）
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    print(f"Random Seed set to: {seed}")
 
 class FeatureExtractor(nn.Module):
     def __init__(self, input_size, hidden_size1, hidden_size2):
@@ -356,35 +369,47 @@ if __name__ == "__main__":
     parser.add_argument('--test', action='store_true' , help='for test')
     parser.add_argument('--model_path', type=str, default='my_model.pth', help='path of .pth file of model')
     parser.add_argument('--work_dir', type=str, default='DANN_CORR', help='create new directory to save result')
+    parser.add_argument('--loss_weights', type=float, nargs=2, default=[0.1, 10.0], help='loss weights for domain and label predictors')
+    parser.add_argument('--epoch', type=int, default=100, help='number of training epochs')
+    parser.add_argument('--unlabeled', action='store_true', help='use unlabeled data from target domain during training')
+    parser.add_argument('--random_seed', type=int, default=42, help='random seed for reproducibility')
     args = parser.parse_args()
-    loss_weights = [0.1, 10] # origin
-    # loss_weights = [0, 1]
-    epoch = 100
-    unlabeled = True
+
+    seed = args.random_seed
+    set_seed(seed)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    loss_str = f'{args.loss_weights[0]}_{args.loss_weights[1]}'
+    epoch_str = f'{args.epoch}'
+    status_str = 'unlabeled' if args.unlabeled else 'labeled'
+    folder_name = f'{loss_str}_{epoch_str}_{status_str}'
+    work_dir = os.path.join(script_dir, args.work_dir, f'random_seed_{seed}' ,folder_name)
+    
+    if args.unlabeled:
+        data_drop_out_list = np.array([0.0])
+    else:
+        data_drop_out_list = np.array([0.9])
     
     domain1_result = []
     domain2_result = []
     domain3_result = []
 
     # data_drop_out_list = np.arange(0.0, 0.9, 0.95)
-    # data_drop_out_list = np.array([0.9])
-    data_drop_out_list = np.array([0.0])
     
     for data_drop_out in data_drop_out_list:
         # 創建 DANNModel    
-        dann_model = HistCorrDANNModel(model_save_path=args.model_path, loss_weights=loss_weights, work_dir=f'{args.work_dir}_{data_drop_out:.1f}')
+        dann_model = HistCorrDANNModel(model_save_path=args.model_path, loss_weights=args.loss_weights, work_dir=work_dir)
         # dann_model.save_model_architecture()
         # 讀取資料
         if args.training_source_domain_data and args.training_target_domain_data:
             # 訓練模型
             dann_model.load_train_data(args.training_source_domain_data, args.training_target_domain_data, data_drop_out)
-            dann_model.train(num_epochs=epoch, unlabeled=unlabeled)
+            dann_model.train(num_epochs=args.epoch, unlabeled=args.unlabeled)
             dann_model.plot_training_results()
         elif args.test:
             dann_model.load_model(args.model_path)
             testing_file_paths = [
-                        r'D:\paper_thesis\Histloc_try\data\MTLocData\Mall\2021-11-20\wireless_testing.csv',
-                        r'D:\paper_thesis\Histloc_try\data\MTLocData\Mall\2022-12-21\wireless_testing.csv'
+                        r'D:\paper_thesis\My\data\MTLocData\Mall\2021-11-20\wireless_testing.csv',
+                        r'D:\paper_thesis\My\data\MTLocData\Mall\2022-12-21\wireless_testing.csv'
                     ]
             output_paths = ['predictions/211120_results.csv', 'predictions/221221_results.csv']
             if not os.path.exists('predictions'):

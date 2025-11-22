@@ -1,32 +1,19 @@
 r'''
-python .\DANN_CORR.py --training_source_domain_data D:\Experiment\data\\UM_DSI_DB_v1.0.0_lite\data\tony_data\2019-06-11\wireless_training.csv ^
-                      --training_target_domain_data D:\Experiment\data\\UM_DSI_DB_v1.0.0_lite\data\tony_data\2020-02-19\wireless_training.csv ^
-                      --work_dir 190611_200219\0.1_10
-python .\DANN_CORR.py ^
-    --testing_data_list D:\Experiment\data\231116\GalaxyA51\routes ^
-                        D:\Experiment\data\220318\GalaxyA51\routes ^
-                        D:\Experiment\data\231117\GalaxyA51\routes ^
-    --model_path 231116_231117.pth ^
-    --work_dir unlabeled\231116_231117\0.1_10
-python ..\..\model_comparison\evaluator.py \
-    --model_name DANN_CORR \
-    --directory 220318_231116\0.1_10_0.0 \
-    --source_domain 220318 \
-    --target_domain 231116
-
 # time variation 1
-python DANN_CORR_gemini.py --training_source_domain_data "D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2019-06-11\wireless_training.csv" ^
-                      --training_target_domain_data "D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2019-10-09\wireless_training.csv" ^
-                      --work_dir "time_variation_1/251113_labeled"
-python DANN_CORR_gemini.py --test --work_dir "time_variation_1/251113_labeled"
-python ../evaluator.py --file 
+python DANN_CORR_GEMINI.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2019-06-11\wireless_training.csv `
+                      --training_target_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2019-10-09\wireless_training.csv `
+                      --work_dir time_variation_1/251113_labeled `
+                      --random_seed 42 --unlabeled
+python DANN_CORR_GEMINI.py --test --work_dir time_variation_1/251113_labeled `
+                       --random_seed 42 --unlabeled
 
 # time variation 2
-python DANN_CORR_gemini.py --training_source_domain_data "D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2019-06-11\wireless_training.csv" ^
-                      --training_target_domain_data "D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2020-02-19\wireless_training.csv" ^
-                      --work_dir "time_variation_2/251113_labeled"
-python DANN_CORR_gemini.py --test --work_dir "time_variation_2/251113_labeled"
-python ../evaluator.py --file 
+python DANN_CORR_GEMINI.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2019-06-11\wireless_training.csv `
+                      --training_target_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2020-02-19\wireless_training.csv `
+                      --work_dir time_variation_2/251113_labeled `
+                        --random_seed 42 --unlabeled
+python DANN_CORR_GEMINI.py --test --work_dir time_variation_2/251113_labeled `
+                        --random_seed 42 --unlabeled
 '''
 import torch
 import torch.nn as nn
@@ -43,6 +30,22 @@ import cv2
 import argparse
 import os
 import sys
+import random
+
+def set_seed(seed=42):
+    """
+    固定所有隨機種子，確保實驗可重現。
+    """
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    # 為了絕對的一致性，犧牲一點效能（選擇性）
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    print(f"Random Seed set to: {seed}")
+
 
 class FeatureExtractor(nn.Module):
     def __init__(self, input_size, hidden_size1, hidden_size2):
@@ -367,27 +370,38 @@ if __name__ == "__main__":
     parser.add_argument('--test', action='store_true' , help='for test')
     parser.add_argument('--model_path', type=str, default='my_model.pth', help='path of .pth file of model')
     parser.add_argument('--work_dir', type=str, default='DANN_CORR', help='create new directory to save result')
+    parser.add_argument('--loss_weights', type=float, nargs=2, default=[1.0, 0.0], help='loss weights for domain and label predictors')
+    parser.add_argument('--epoch', type=int, default=100, help='number of training epochs')
+    parser.add_argument('--unlabeled', action='store_true', help='use unlabeled data from target domain during training')
+    parser.add_argument('--random_seed', type=int, default=42, help='random seed for reproducibility')
     args = parser.parse_args()
-    loss_weights = [0.1, 10]
-    epoch = 100
-    unlabeled = False
     
-    domain1_result = []
-    domain2_result = []
-    domain3_result = []
+    seed = args.random_seed
+    set_seed(seed)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    loss_str = f'{args.loss_weights[0]}_{args.loss_weights[1]}'
+    epoch_str = f'{args.epoch}'
+    status_str = 'unlabeled' if args.unlabeled else 'labeled'
+    folder_name = f'{loss_str}_{epoch_str}_{status_str}'
+    work_dir = os.path.join(script_dir, args.work_dir, f'random_seed_{seed}', folder_name)
+    
+    if args.unlabeled:
+        data_drop_out_list = np.array([0.0])
+    else:
+        data_drop_out_list = np.array([0.9])
+
 
     # data_drop_out_list = np.arange(0.9, 0.95, 0.1)
-    data_drop_out_list = np.array([0.9])
 
     for data_drop_out in data_drop_out_list:
         # 創建 DANNModel    
-        dann_model = HistCorrDANNModel(model_save_path=args.model_path, loss_weights=loss_weights, work_dir=f'{args.work_dir}_{data_drop_out:.1f}')
+        dann_model = HistCorrDANNModel(model_save_path=args.model_path, loss_weights=args.loss_weights, work_dir=work_dir)
         dann_model.save_model_architecture()
         # 讀取資料
         if args.training_source_domain_data and args.training_target_domain_data:
             # 訓練模型
             dann_model.load_train_data(args.training_source_domain_data, args.training_target_domain_data, data_drop_out)
-            dann_model.train(num_epochs=epoch, unlabeled=unlabeled)
+            dann_model.train(num_epochs=args.epoch, unlabeled=args.unlabeled)
             dann_model.plot_training_results()
         elif args.test:
             dann_model.load_model(args.model_path)

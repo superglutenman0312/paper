@@ -3,17 +3,17 @@
 python SWD.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\220318\GalaxyA51\wireless_training.csv `
              --training_target_domain_data D:\paper_thesis\Histloc_real\Experiment\data\231116\GalaxyA51\wireless_training.csv `
              --work_dir time_variation `
-             --loss_weights 0.1 10 --epoch 5 --unlabeled
+             --loss_weights 0.1 10 --epoch 5 --random_seed 42 --unlabeled
 python SWD.py --test --work_dir time_variation `
-             --loss_weights 0.1 10 --epoch 5 --unlabeled
+             --loss_weights 0.1 10 --epoch 5 --random_seed 42 --unlabeled
 
 # spatial variation
 python SWD.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\231116\GalaxyA51\wireless_training.csv `
              --training_target_domain_data D:\paper_thesis\Histloc_real\Experiment\data\231117\GalaxyA51\wireless_training.csv `
              --work_dir spatial_variation `
-             --loss_weights 0.1 10 --epoch 20 --unlabeled
+             --loss_weights 0.1 10 --epoch 20 --random_seed 42 --unlabeled
 python SWD.py --test --work_dir spatial_variation `
-             --loss_weights 0.1 10 --epoch 20 --unlabeled
+             --loss_weights 0.1 10 --epoch 20 --random_seed 42 --unlabeled
 '''
 import torch
 import torch.nn as nn
@@ -29,6 +29,21 @@ import cv2
 import argparse
 import os
 import sys
+import random
+
+def set_seed(seed=42):
+    """
+    固定所有隨機種子，確保實驗可重現。
+    """
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    # 為了絕對的一致性，犧牲一點效能（選擇性）
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    print(f"Random Seed set to: {seed}")
 
 class FeatureExtractor(nn.Module):
     def __init__(self, input_size, hidden_size1, hidden_size2):
@@ -392,15 +407,18 @@ if __name__ == "__main__":
     parser.add_argument('--loss_weights', type=float, nargs=2, default=[0.1, 10.0], help='loss weights for domain and label predictors')
     parser.add_argument('--epoch', type=int, default=500, help='number of training epochs')
     parser.add_argument('--unlabeled', action='store_true', help='use unlabeled data from target domain during training')
+    parser.add_argument('--random_seed', type=int, default=42, help='random seed for reproducibility')
     args = parser.parse_args()
     
+    seed = args.random_seed
+    set_seed(seed)
     script_dir = os.path.dirname(os.path.abspath(__file__))
     loss_str = f'{args.loss_weights[0]}_{args.loss_weights[1]}'
     epoch_str = f'{args.epoch}'
     status_str = 'unlabeled' if args.unlabeled else 'labeled'
     folder_name = f'{loss_str}_{epoch_str}_{status_str}'
-    work_dir = os.path.join(script_dir, args.work_dir, folder_name)
-    
+    work_dir = os.path.join(script_dir, args.work_dir, f'random_seed_{seed}', folder_name)
+
     if args.unlabeled:
         data_drop_out_list = np.array([0.0])
     else:

@@ -137,10 +137,10 @@ def main():
     EXPERIMENT_TYPE = 'experiments' 
     
     MODES = ['labeled', 'unlabeled']
-    ALPHAS = [0.1, 1.0, 10.0]
-    BETAS = [0.1, 1.0, 10.0]
+    ALPHAS = [1.0]
+    BETAS = [0.001, 0.01, 0.1, 1.0, 10.0, 100.0, 1000.0]
     EPOCH = 100
-    
+    RANDOM_SEED = [42, 70, 100]  # (保留) 如果需要多個隨機種子，可在此擴展
     # !! 重要 !!
     # 這裡的 'SOURCE_FILE_TAG' 和 'TARGET_FILE_TAG' 
     # 必須對應到您 *新資料集* 實驗的 predictions 資料夾中的 .csv 檔名
@@ -157,28 +157,28 @@ def main():
         
     base_work_dir = EXPERIMENT_TYPE
     all_results = []
+    for seed in RANDOM_SEED:
+        for mode in MODES:
+            for alpha in ALPHAS:
+                for beta in BETAS:
+                    
+                    params_str = f"{alpha}_{beta}_{EPOCH}_{seed}_{mode}"
+                    model_dir = os.path.join(base_work_dir, params_str, 'predictions')
+                    combo_label = f"a={alpha}\nb={beta}"
 
-    for mode in MODES:
-        for alpha in ALPHAS:
-            for beta in BETAS:
-                
-                params_str = f"{alpha}_{beta}_{EPOCH}_{mode}"
-                model_dir = os.path.join(base_work_dir, params_str, 'predictions')
-                combo_label = f"a={alpha}\nb={beta}"
+                    print(f"\n正在處理: {model_dir}")
 
-                print(f"\n正在處理: {model_dir}")
+                    # 1. 計算 Source MDE
+                    source_path = os.path.join(model_dir, f'{SOURCE_FILE_TAG}_results.csv')
+                    mde_source = calculate_mde_from_file(source_path)
+                    
+                    # 2. 計算 Target MDE
+                    target_path = os.path.join(model_dir, f'{TARGET_FILE_TAG}_results.csv')
+                    mde_target = calculate_mde_from_file(target_path)
 
-                # 1. 計算 Source MDE
-                source_path = os.path.join(model_dir, f'{SOURCE_FILE_TAG}_results.csv')
-                mde_source = calculate_mde_from_file(source_path)
-                
-                # 2. 計算 Target MDE
-                target_path = os.path.join(model_dir, f'{TARGET_FILE_TAG}_results.csv')
-                mde_target = calculate_mde_from_file(target_path)
-
-                # 3. 儲存結果
-                all_results.append({ 'mode': mode, 'alpha': alpha, 'beta': beta, 'combo_label': combo_label, 'type': 'Source', 'mde': mde_source })
-                all_results.append({ 'mode': mode, 'alpha': alpha, 'beta': beta, 'combo_label': combo_label, 'type': 'Target', 'mde': mde_target })
+                    # 3. 儲存結果
+                    all_results.append({ 'mode': mode, 'alpha': alpha, 'beta': beta, 'combo_label': combo_label, 'type': 'Source', 'mde': mde_source })
+                    all_results.append({ 'mode': mode, 'alpha': alpha, 'beta': beta, 'combo_label': combo_label, 'type': 'Target', 'mde': mde_target })
 
     if not all_results:
         print("錯誤：沒有收集到任何結果。")
