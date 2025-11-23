@@ -7,11 +7,12 @@ import matplotlib.pyplot as plt
 # ================= 設定區 =================
 
 # 1. 定義要比較的方法
-METHODS = ["DANN", "DANN_CORR", "DANN_CORR_GEMINI"]
+# METHODS = ["DANN", "DANN_CORR", "DANN_CORR_GEMINI"]
+METHODS = ["DANN_CORR"]
 
 # 2. 定義 Random Seeds
-# SEEDS = [42, 70, 100]
-SEEDS = [42, 70]
+SEEDS = [42, 70, 100]
+# SEEDS = [42, 70]
 
 # 3. 定義場景與對應的 Source/Target 檔案
 # 根據 Train Script 與目錄截圖設定

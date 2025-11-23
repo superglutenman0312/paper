@@ -70,44 +70,61 @@ def calculate_mde_from_file(file_path):
         return np.nan
 
 
-# --- 2. 繪圖函式 (單一種子繪圖) ---
+# --- 2. 繪圖函式 (合併 Label/Unlabel 與 自訂標題) ---
 
-def plot_single_seed_chart(df, mode, seed, experiment_name, output_filename):
+def plot_combined_chart(df, title_seed_part, experiment_name, output_filename):
     """
-    繪製單一 Random Seed 的長條圖
+    繪製合併長條圖 (左: Labeled, 右: Unlabeled)
+    title_seed_part: 標題中關於 Seed 的描述，例如 "Random Seed 42" 或 "Average Result"
     """
-    mode_df = df[df['mode'] == mode].copy()
-    if mode_df.empty:
-        print(f"  [Skip] Seed {seed} - {mode}: 沒有資料可供繪圖。")
-        return
-
-    # 確保按照 Beta 大小排序
-    mode_df = mode_df.sort_values(by=['beta'])
-
-    combo_labels = mode_df['combo_label'].unique()
-    source_mdes = mode_df[mode_df['type'] == 'Source']['mde'].values
-    target_mdes = mode_df[mode_df['type'] == 'Target']['mde'].values
-
-    x = np.arange(len(combo_labels))
-    width = 0.35 
-
-    fig, ax = plt.subplots(figsize=(14, 8)) 
+    modes = ['labeled', 'unlabeled']
     
-    rects1 = ax.bar(x - width/2, source_mdes, width, label='Source MDE', alpha=0.9)
-    rects2 = ax.bar(x + width/2, target_mdes, width, label='Target MDE', alpha=0.9)
+    # 建立 1x2 的子圖
+    fig, axes = plt.subplots(1, 2, figsize=(20, 8)) 
+    
+    # 設定整張圖的大標題
+    fig.suptitle(f'MDE Analysis - {title_seed_part}\nExperiment: {experiment_name}', fontsize=16)
 
-    ax.set_ylabel('Mean Distance Error (MDE) [m]')
-    ax.set_xlabel('Loss Weights Parameters')
-    ax.set_title(f'MDE Analysis for {mode.capitalize()} Models\nExperiment: {experiment_name} (Seed {seed})')
-    ax.set_xticks(x)
-    ax.set_xticklabels(combo_labels, rotation=0)
-    ax.legend()
-    ax.grid(axis='y', linestyle='--', alpha=0.5)
+    for i, mode in enumerate(modes):
+        ax = axes[i]
+        
+        mode_df = df[df['mode'] == mode].copy()
+        if mode_df.empty:
+            print(f"  [Skip] {title_seed_part} - {mode}: 沒有資料可供繪圖。")
+            ax.text(0.5, 0.5, 'No Data', horizontalalignment='center', verticalalignment='center', transform=ax.transAxes)
+            ax.set_title(f'{mode.capitalize()} Mode')
+            continue
 
-    ax.bar_label(rects1, padding=3, fmt='%.2f')
-    ax.bar_label(rects2, padding=3, fmt='%.2f')
+        # 確保按照 Beta 大小排序
+        mode_df = mode_df.sort_values(by=['beta'])
+
+        combo_labels = mode_df['combo_label'].unique()
+        source_mdes = mode_df[mode_df['type'] == 'Source']['mde'].values
+        target_mdes = mode_df[mode_df['type'] == 'Target']['mde'].values
+
+        x = np.arange(len(combo_labels))
+        width = 0.35 
+
+        # 繪製長條圖
+        rects1 = ax.bar(x - width/2, source_mdes, width, label='Source MDE', alpha=0.9)
+        rects2 = ax.bar(x + width/2, target_mdes, width, label='Target MDE', alpha=0.9)
+
+        ax.set_ylabel('Mean Distance Error (MDE) [m]')
+        ax.set_xlabel('Loss Weights Parameters')
+        ax.set_title(f'{mode.capitalize()} Mode')
+        
+        ax.set_xticks(x)
+        ax.set_xticklabels(combo_labels, rotation=0)
+        ax.legend()
+        ax.grid(axis='y', linestyle='--', alpha=0.5)
+
+        # 數值標籤 (保留兩位小數)
+        ax.bar_label(rects1, padding=3, fmt='%.2f')
+        ax.bar_label(rects2, padding=3, fmt='%.2f')
 
     fig.tight_layout()
+    fig.subplots_adjust(top=0.88) # 調整上方空間給大標題
+    
     plt.savefig(output_filename, dpi=300)
     plt.close()
     print(f"  成功儲存圖表: {output_filename}")
@@ -122,12 +139,9 @@ def main():
     
     MODES = ['labeled', 'unlabeled']
     ALPHAS = [1.0] 
-    BETAS = [0.001, 0.01, 0.1, 1.0, 10.0, 100.0, 1000.0]
+    BETAS = [1.0, 10.0, 100.0]
     EPOCH = 100
     RANDOM_SEEDS = [42, 70, 100] 
-    # BETAS = [0.1, 1.0]
-    # EPOCH = 1
-    # RANDOM_SEEDS = [42, 70] 
     
     # --- 最外層：遍歷實驗類型 ---
     for exp_type in EXPERIMENT_TYPES:
@@ -146,6 +160,9 @@ def main():
             continue
 
         base_work_dir = exp_type
+        
+        # 用來儲存當前實驗類型下，所有 Seed 的結果 (算平均用)
+        all_results_for_exp = []
 
         # --- 中層：遍歷 Random Seed ---
         for seed in RANDOM_SEEDS:
@@ -174,8 +191,13 @@ def main():
                         mde_target = calculate_mde_from_file(target_path)
 
                         if not np.isnan(mde_source) and not np.isnan(mde_target):
-                            seed_results.append({ 'mode': mode, 'alpha': alpha, 'beta': beta, 'combo_label': combo_label, 'type': 'Source', 'mde': mde_source })
-                            seed_results.append({ 'mode': mode, 'alpha': alpha, 'beta': beta, 'combo_label': combo_label, 'type': 'Target', 'mde': mde_target })
+                            record_s = { 'mode': mode, 'alpha': alpha, 'beta': beta, 'combo_label': combo_label, 'type': 'Source', 'mde': mde_source }
+                            record_t = { 'mode': mode, 'alpha': alpha, 'beta': beta, 'combo_label': combo_label, 'type': 'Target', 'mde': mde_target }
+                            seed_results.append(record_s)
+                            seed_results.append(record_t)
+
+            # 將此 Seed 的結果加入總表
+            all_results_for_exp.extend(seed_results)
 
             if not seed_results:
                 print(f"Seed {seed} ({exp_type}) 沒有收集到任何有效數據。")
@@ -183,14 +205,26 @@ def main():
                 
             seed_df = pd.DataFrame(seed_results)
             
-            # 繪圖並存檔 (存在該 Seed 的資料夾內)
-            # 1. Labeled
-            labeled_out_path = os.path.join(seed_base_dir, f'seed_{seed}_{exp_type}_labeled_mde.png')
-            plot_single_seed_chart(seed_df, 'labeled', seed, exp_type, labeled_out_path)
+            # 繪圖並存檔 (個別 Seed 的合併圖)
+            # 存於 random_seed_xx/seed_xx_time_variation_1_combined_mde.png
+            combined_out_path = os.path.join(seed_base_dir, f'seed_{seed}_{exp_type}_combined_mde.png')
+            plot_combined_chart(seed_df, f"Random Seed {seed}", exp_type, combined_out_path)
+
+        # --- 在該實驗類型結束後，計算平均並繪圖 ---
+        print(f"\n>>> 正在計算 {exp_type} 的平均結果並繪圖...")
+        
+        if all_results_for_exp:
+            all_df = pd.DataFrame(all_results_for_exp)
             
-            # 2. Unlabeled
-            unlabeled_out_path = os.path.join(seed_base_dir, f'seed_{seed}_{exp_type}_unlabeled_mde.png')
-            plot_single_seed_chart(seed_df, 'unlabeled', seed, exp_type, unlabeled_out_path)
+            # 根據 模式、參數、類型 分組取平均
+            avg_df = all_df.groupby(['mode', 'alpha', 'beta', 'combo_label', 'type'], as_index=False)['mde'].mean()
+            
+            # 設定平均圖的輸出路徑 (存於 time_variation_1/average_combined_mde.png)
+            avg_output_filename = os.path.join(base_work_dir, f'average_{exp_type}_combined_mde.png')
+            
+            plot_combined_chart(avg_df, "Average Result", exp_type, avg_output_filename)
+        else:
+            print(f"錯誤：{exp_type} 沒有任何數據可供計算平均值。")
 
     print("\n所有實驗分析完成！")
 

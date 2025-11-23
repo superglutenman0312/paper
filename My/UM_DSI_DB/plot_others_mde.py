@@ -8,7 +8,8 @@ import re
 # ================= 設定區 =================
 
 # 1. 定義要比較的方法 (對應資料夾名稱)
-METHODS = ["DANN", "DANN_CORR", "DANN_CORR_GEMINI"]
+# METHODS = ["DANN", "DANN_CORR", "DANN_CORR_GEMINI"]
+METHODS = ["DANN", "DANN_GEMINI"]
 
 # 2. 定義 Random Seeds
 SEEDS = [42, 70, 100]
@@ -27,7 +28,7 @@ SCENARIOS = {
 }
 
 # 4. 輸出目錄
-OUTPUT_DIR = "MDE_result_UM_DSI"
+OUTPUT_DIR = "MDE_result_UM_DSI2"
 
 # 5. 內建座標對照表 (來自 evaluator.py)
 LABEL_TO_COORD = {

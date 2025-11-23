@@ -7,10 +7,14 @@ Write-Host "[INFO] PowerShell loop experiment starting..." -ForegroundColor Gree
 # ================= 設定區 =================
 
 # 1. 定義方法名稱 (資料夾名稱與 .py 檔名)
+# $methods = @(
+#     "DANN", 
+#     "DANN_CORR", 
+#     "DANN_CORR_GEMINI"
+# )
+
 $methods = @(
-    "DANN", 
-    "DANN_CORR", 
-    "DANN_CORR_GEMINI"
+    "DANN_GEMINI"
 )
 
 # 2. 定義 Random Seeds

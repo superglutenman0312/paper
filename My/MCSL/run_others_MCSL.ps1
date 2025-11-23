@@ -15,8 +15,7 @@ Write-Host "[INFO] CWD has been set to: $(Get-Location)" -ForegroundColor Gray
 # )
 
 $methods = @(
-    "DANN_CORR", 
-    "DANN_CORR_GEMINI"
+    "DANN_CORR"
 )
 
 # 2. Define Random Seeds
@@ -90,13 +89,13 @@ foreach ($method in $methods) {
                 python $scriptPath --training_source_domain_data $($scen.SourceData) `
                                    --training_target_domain_data $($scen.TargetData) `
                                    --work_dir $currentWorkDir `
-                                   --random_seed $seed --epoch 1 `
+                                   --random_seed $seed `
                                    $modeFlag
 
                 # --- 2. Testing ---
                 python $scriptPath --test `
                                    --work_dir $currentWorkDir `
-                                   --random_seed $seed --epoch 1 `
+                                   --random_seed $seed `
                                    $modeFlag
 
                 Write-Host "Done." -ForegroundColor Gray
