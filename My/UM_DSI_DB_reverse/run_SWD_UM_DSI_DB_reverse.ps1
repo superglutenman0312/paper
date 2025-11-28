@@ -11,9 +11,13 @@ Write-Host "[INFO] PowerShell loop experiment starting..." -ForegroundColor Gree
 # ---------------------------------
 $EpochNum = 300                                     # 保留原設定 300
 $Alpha = 1                                          # Alpha 固定為 1
-$BetaValues = @(0.001, 0.01, 0.1, 1, 10, 100, 1000) # Beta 範圍擴大
+$BetaValues = @(1, 5, 10, 25, 50, 100) # Beta 範圍擴大
 $Seeds = @(42, 70, 100)                             # Random Seed 列表
- 
+
+# $EpochNum = 1                                     # 保留原設定 300
+# $Alpha = 1                                          # Alpha 固定為 1
+# $BetaValues = @(1, 5) # Beta 範圍擴大
+# $Seeds = @(42, 70)                             # Random Seed 列表
 # ---------------------------------
 # 2. Outer loop: (unlabeled / labeled)
 # ---------------------------------

@@ -331,7 +331,7 @@ if __name__ == "__main__":
     parser.add_argument('--test', action='store_true' , help='for test')
     parser.add_argument('--model_path', type=str, default='my_model.pth', help='path of .pth file of model')
     parser.add_argument('--work_dir', type=str, default='DANN_CORR', help='create new directory to save result')
-    parser.add_argument('--loss_weights', type=float, nargs=2, default=[1.0, 0.0], help='loss weights for domain and label predictors')
+    parser.add_argument('--loss_weights', type=float, nargs=2, default=[0.1, 10.0], help='loss weights for domain and label predictors')
     parser.add_argument('--epoch', type=int, default=100, help='number of training epochs')
     parser.add_argument('--unlabeled', action='store_true', help='use unlabeled data from target domain during training')
     parser.add_argument('--random_seed', type=int, default=42, help='random seed for reproducibility')

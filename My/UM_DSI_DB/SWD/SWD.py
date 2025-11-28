@@ -14,7 +14,6 @@ python SWD.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experim
              --loss_weights 0.1 10 --epoch 20 --random_seed 42 --unlabeled
 python SWD.py --test --work_dir time_variation_2 `
              --loss_weights 0.1 10 --epoch 20 --random_seed 42 --unlabeled
-
 '''
 import torch
 import torch.nn as nn

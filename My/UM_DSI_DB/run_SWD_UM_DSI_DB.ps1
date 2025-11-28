@@ -11,14 +11,12 @@ Write-Host "[INFO] PowerShell loop experiment starting..." -ForegroundColor Gree
 # ---------------------------------
 $EpochNum = 100
 $Alpha = 1                                          # Alpha 固定為 1
-# $BetaValues = @(0.001, 0.01, 0.1, 1, 10, 100, 1000) # Beta 範圍擴大
+$BetaValues = @(1, 5, 10, 25, 50, 100) # Beta 範圍擴大
 $Seeds = @(42, 70, 100)                             # Random Seed 列表
-$BetaValues = @(1, 10, 100) # Beta 範圍擴大
-
 
 # $EpochNum = 1
 # $Alpha = 1                                          # Alpha 固定為 1
-# $BetaValues = @(0.1, 1) # Beta 範圍擴大
+# $BetaValues = @(1, 5) # Beta 範圍擴大
 # $Seeds = @(42, 70)   
 # ---------------------------------
 # 2. Outer loop: (unlabeled / labeled)
@@ -57,14 +55,14 @@ foreach ($Mode in @("labeled", "unlabeled")) {
             
             # (Train)
             Write-Host "[$Mode]: Training Time Variation 1 ($Alpha, $Beta, Seed=$Seed)..."
-            python .\SWD2\SWD2.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2019-06-11\wireless_training.csv `
+            python .\SWD\SWD.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2019-06-11\wireless_training.csv `
                               --training_target_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2019-10-09\wireless_training.csv `
                               --work_dir time_variation_1 `
                               --loss_weights $Alpha $Beta --epoch $EpochNum --random_seed $Seed $Flag
             
             # (Test)
             Write-Host "[$Mode]: Testing Time Variation 1 ($Alpha, $Beta, Seed=$Seed)..."
-            python .\SWD2\SWD2.py --test --work_dir time_variation_1 `
+            python .\SWD\SWD.py --test --work_dir time_variation_1 `
                               --loss_weights $Alpha $Beta --epoch $EpochNum --random_seed $Seed $Flag
 
             # ==========================================
@@ -73,14 +71,14 @@ foreach ($Mode in @("labeled", "unlabeled")) {
 
             # (Train)
             Write-Host "[$Mode]: Training Time Variation 2 ($Alpha, $Beta, Seed=$Seed)..."
-            python .\SWD2\SWD2.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2019-06-11\wireless_training.csv `
+            python .\SWD\SWD.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2019-06-11\wireless_training.csv `
                               --training_target_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2020-02-19\wireless_training.csv `
                               --work_dir time_variation_2 `
                               --loss_weights $Alpha $Beta --epoch $EpochNum --random_seed $Seed $Flag
             
             # (Test)
             Write-Host "[$Mode]: Testing Time Variation 2 ($Alpha, $Beta, Seed=$Seed)..."
-            python .\SWD2\SWD2.py --test --work_dir time_variation_2 `
+            python .\SWD\SWD.py --test --work_dir time_variation_2 `
                               --loss_weights $Alpha $Beta --epoch $EpochNum --random_seed $Seed $Flag
             
             Write-Host "-------------------------------------------------" -ForegroundColor DarkGray

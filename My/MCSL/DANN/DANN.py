@@ -173,7 +173,7 @@ class DANN(nn.Module):
         self.test_dataset = IndoorLocalizationDataset(test_data_path)
         self.test_loader = DataLoader(self.test_dataset, shuffle=False)
 
-    def train(self, unlabeled=False):
+    def train_model(self, unlabeled=False):
         for epoch in range(self.epochs):
             loss_list, acc_list = self._run_epoch([self.source_train_loader, self.target_train_loader], training=True, unlabeled=unlabeled)
 
@@ -367,31 +367,35 @@ class DANN(nn.Module):
         # 1. 建立儲存結果的字典
         predictions = {'label': [], 'pred': []}
         
-        # 2. 根據傳入的 file_path 載入測試資料 (這會更新 self.test_loader)
+        # 2. 根據傳入的 file_path 載入測試資料
         self.load_test_data(file_path)
         
-        # 3. 進行預測 (模型已在 `elif args.test:` 區塊載入)
-        self.domain_adaptation_model.eval()
+        # 3. 設定模型為評估模式 (修正點：直接使用 self)
+        self.eval() 
+        
         with torch.no_grad():
             # 4. 疊代剛載入的 self.test_loader
             for test_batch, true_label_batch in self.test_loader:
                 
-                # 5. 呼叫 predict 方法 (這和 reverse.py 的做法一致)
-                labels_pred = self.predict(test_batch)
+                # 5. 進行預測 (修正點：改用 forward，並只取 class_output)
+                # forward 回傳 (class_output, domain_output)，我們只需要前者
+                labels_pred, _ = self.forward(test_batch)
                 
-                # 6. 處理標籤 (保留 DANN_CORR.py 原本的邏輯)
+                # 6. 處理標籤
                 _, preds = torch.max(labels_pred, 1)
-                predicted_labels = preds + 1  # 加 1 是为了将索引转换为 1 到 41 的标签
+                predicted_labels = preds + 1  # 加 1 是為了將索引轉換為 1 到 41 的標籤
                 label = true_label_batch + 1
                 
                 # 7. 將預測結果保存到 predictions 中
                 predictions['label'].extend(label.tolist())
                 predictions['pred'].extend(predicted_labels.tolist())
                 
-        # 8. 将预测结果保存为 CSV 文件 (不再 return)
+        # 8. 將預測結果保存為 CSV 文件
         results = pd.DataFrame(predictions)
+        # 確保目錄存在 (選用，避免路徑報錯)
+        os.makedirs(os.path.dirname(output_path), exist_ok=True) 
         results.to_csv(output_path, index=False)
-        print(f"Predictions successfully saved to {output_path}") # (可選) 增加提示
+        print(f"Predictions successfully saved to {output_path}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Train DANN Model')
@@ -435,7 +439,7 @@ if __name__ == "__main__":
         if args.training_source_domain_data and args.training_target_domain_data:
             # 訓練模型
             dann_model.load_train_data(args.training_source_domain_data, args.training_target_domain_data, data_drop_out)
-            dann_model.train(unlabeled=args.unlabeled)
+            dann_model.train_model(unlabeled=args.unlabeled)
             dann_model.plot_training_results()
         elif args.test:
             dann_model.load_model(args.model_path)

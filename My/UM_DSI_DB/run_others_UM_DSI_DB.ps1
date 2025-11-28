@@ -8,17 +8,20 @@ Write-Host "[INFO] PowerShell loop experiment starting..." -ForegroundColor Gree
 
 # 1. 定義方法名稱 (資料夾名稱與 .py 檔名)
 # $methods = @(
-#     "DANN", 
-#     "DANN_CORR", 
-#     "DANN_CORR_GEMINI"
+#     "DANN",
+#     "DANN_CORR",
+#     "DANN_CORR_GEMINI",
+#     "DNN"
 # )
 
 $methods = @(
-    "DANN_GEMINI"
+    "DANN_CORR_GEMINI",
+    "DNN"
 )
 
 # 2. 定義 Random Seeds
 $seeds = @(42, 70, 100)
+# $seeds = @(42, 70)
 
 # 3. 定義模式
 $modes = @("Labeled", "Unlabeled")
@@ -100,8 +103,8 @@ foreach ($method in $methods) {
         }
     }
 }
-Write-Host "[INFO] Ploting MDE diagram..." -ForegroundColor Green
-python plot_others_mde.py
+# Write-Host "[INFO] Ploting MDE diagram..." -ForegroundColor Green
+# python plot_others_mde.py
 
 Write-Host "########################################################" -ForegroundColor Magenta
 Write-Host "ALL DONE." -ForegroundColor Magenta

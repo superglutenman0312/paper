@@ -11,11 +11,12 @@ Write-Host "[INFO] PowerShell loop experiment starting..." -ForegroundColor Gree
 # ---------------------------------
 $EpochNum = 100
 $Alpha = 1                                      # Alpha 固定為 1
-$BetaValues = @(0.001, 0.01, 0.1, 1, 10, 100, 1000) # Beta 範圍擴大
+$BetaValues = @(1, 5, 10, 25, 50, 100) # Beta 範圍擴大
 $Seeds = @(42, 70, 100)                         # 新增 Random Seed 列表
+
 # $EpochNum = 1
 # $Alpha = 1                                      # Alpha 固定為 1
-# $BetaValues = @(0.1, 1) # Beta 範圍擴大
+# $BetaValues = @(1, 5) # Beta 範圍擴大
 # $Seeds = @(42, 70)                         # 新增 Random Seed 列表
 
 # ---------------------------------
@@ -51,12 +52,12 @@ foreach ($Mode in @("labeled", "unlabeled")) {
             Write-Host "[$Mode]: Training (Alpha=$Alpha, Beta=$Beta, Seed=$Seed)..."
             python .\SWD\SWD.py --training_source_domain_data D:/paper_thesis/My/data/MTLocData/Mall/2021-11-20/wireless_training.csv `
                               --training_target_domain_data D:/paper_thesis/My/data/MTLocData/Mall/2022-12-21/wireless_training.csv `
-                              --work_dir experiments4 `
+                              --work_dir experiments `
                               --loss_weights $Alpha $Beta --epoch $EpochNum --random_seed $Seed $Flag
             
             # (Test)
             Write-Host "[$Mode]: Testing (Alpha=$Alpha, Beta=$Beta, Seed=$Seed)..."
-            python .\SWD\SWD.py --test --work_dir experiments4 `
+            python .\SWD\SWD.py --test --work_dir experiments `
                               --loss_weights $Alpha $Beta --epoch $EpochNum --random_seed $Seed $Flag
             
             Write-Host "-------------------------------------------------" -ForegroundColor DarkGray
@@ -69,5 +70,5 @@ Write-Host "[INFO] End... All experiments finished." -ForegroundColor Green
 
 # ---------------------------------
 # Plot results
-python .\SWD\plot_result_rs.py
-Write-Host "[INFO] Process Complete." -ForegroundColor Green
+# python .\SWD\plot_result_rs.py
+# Write-Host "[INFO] Process Complete." -ForegroundColor Green

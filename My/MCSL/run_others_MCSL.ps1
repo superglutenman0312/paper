@@ -11,12 +11,15 @@ Write-Host "[INFO] CWD has been set to: $(Get-Location)" -ForegroundColor Gray
 # $methods = @(
 #     "DANN", 
 #     "DANN_CORR", 
-#     "DANN_CORR_GEMINI"
+#     "DANN_CORR_GEMINI",
+#     "DNN"
 # )
 
 $methods = @(
-    "DANN_CORR"
+    "DANN_CORR_GEMINI",
+    "DNN"
 )
+
 
 # 2. Define Random Seeds
 $seeds = @(42, 70, 100)
@@ -103,8 +106,8 @@ foreach ($method in $methods) {
         }
     }
 }
-Write-Host "[INFO] Ploting MDE diagram..." -ForegroundColor Green
-python plot_others_mde.py
+# Write-Host "[INFO] Ploting MDE diagram..." -ForegroundColor Green
+# python plot_others_mde.py
 
 Write-Host "########################################################" -ForegroundColor Magenta
 Write-Host "ALL TASKS COMPLETED." -ForegroundColor Magenta

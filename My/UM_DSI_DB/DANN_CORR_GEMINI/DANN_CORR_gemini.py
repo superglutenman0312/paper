@@ -3,7 +3,7 @@ r'''
 python DANN_CORR_GEMINI.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2019-06-11\wireless_training.csv `
                       --training_target_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2019-10-09\wireless_training.csv `
                       --work_dir time_variation_1/251113_labeled `
-                      --random_seed 42 --unlabeled
+                      --random_seed 42 --unlabeled --epoch 1
 python DANN_CORR_GEMINI.py --test --work_dir time_variation_1/251113_labeled `
                        --random_seed 42 --unlabeled
 
@@ -46,6 +46,40 @@ def set_seed(seed=42):
     torch.backends.cudnn.benchmark = False
     print(f"Random Seed set to: {seed}")
 
+class SoftHistogram(nn.Module):
+    def __init__(self, bins=100, min=0.0, max=1.0, sigma=0.01):
+        super(SoftHistogram, self).__init__()
+        self.bins = bins
+        self.min = min
+        self.max = max
+        self.sigma = sigma
+        # 計算每個 bin 的中心點
+        self.delta = (max - min) / bins
+        self.centers = float(min) + self.delta * (torch.arange(bins).float() + 0.5)
+        # 將 centers 註冊為 buffer，這樣它會跟著模型移動到 GPU，但不是可訓練參數
+        self.register_buffer('bin_centers', self.centers)
+
+    def forward(self, x):
+        """
+        x: 輸入特徵，形狀應為 (N,) 或 (N, 1) 的扁平化資料
+        return: 形狀為 (bins,) 的直方圖
+        """
+        x = x.flatten().unsqueeze(1)  # 轉為 (N, 1)
+        centers = self.bin_centers.unsqueeze(0)  # 轉為 (1, bins)
+        
+        # 計算輸入值與每個 bin 中心的距離
+        x = x - centers
+        
+        # 使用高斯核函數 (Gaussian Kernel) 進行平滑計數
+        # 這裡模擬了 PDF (Probability Density Function)
+        x = torch.exp(-0.5 * (x / self.sigma) ** 2)
+        
+        # 對所有樣本求和，得到每個 bin 的高度
+        hist = x.sum(dim=0)
+        
+        # 數值穩定性處理：避免直方圖全為 0 導致後續除法出錯
+        hist = hist + 1e-7 
+        return hist
 
 class FeatureExtractor(nn.Module):
     def __init__(self, input_size, hidden_size1, hidden_size2):
@@ -143,6 +177,7 @@ class HistCorrDANNModel:
         self.feature_extractor = FeatureExtractor(self.input_size, self.feature_extractor_neurons[0], self.feature_extractor_neurons[1])
         self.label_predictor = LabelPredictor(self.feature_extractor_neurons[1], num_classes=49)
         self.domain_adaptation_model = DomainAdaptationModel(self.feature_extractor, self.label_predictor)
+        self.soft_hist = SoftHistogram(bins=100, min=0.0, max=1.0, sigma=0.01)
 
     def _initialize_optimizer(self):
         self.optimizer = optim.Adam(self.domain_adaptation_model.parameters(), lr=self.lr)
@@ -154,46 +189,28 @@ class HistCorrDANNModel:
         self.val_total_losses, self.val_label_losses, self.val_domain_losses = [], [], []
         self.val_source_accuracies, self.val_target_accuracies, self.val_total_accuracies = [], [], []
 
-    # def domain_invariance_loss(self, source_hist, target_hist):
-    #     correlation = cv2.compareHist(source_hist, target_hist, cv2.HISTCMP_CORREL)
-    #     return 1 - correlation
-
     def domain_invariance_loss(self, source_features, target_features):
-        """
-        計算可微分的 domain loss (1 - Correlation)。
-        1. 使用 torch.histc (可微分) 替換 cv2.calcHist。
-        2. 使用 PyTorch 運算實現 Pearson 相關係數 (論文 Eq 3.9) 
-           以替換 cv2.compareHist。
-        """
-        
-        # 1. 計算直方圖 (Histogram) - 使用 PyTorch
-        # 論文 和原始碼 均使用 100 bins, 範圍 [0, 1]
-        source_hist = torch.histc(source_features.flatten(), bins=100, min=0.0, max=1.0)
-        target_hist = torch.histc(target_features.flatten(), bins=100, min=0.0, max=1.0)
+        # 1. 計算 Soft Histogram (這一步現在有梯度了！)
+        # 確保 soft_hist 在正確的裝置上 (GPU/CPU)
+        if next(self.domain_adaptation_model.parameters()).is_cuda:
+            self.soft_hist = self.soft_hist.to(source_features.device)
 
-        # 2. 計算 Pearson 相關係數 (Correlation) - 使用 PyTorch
-        # 這是論文 Eq 3.9 的 PyTorch 實現
-        
-        # H_S 和 H_T
+        source_hist = self.soft_hist(source_features)
+        target_hist = self.soft_hist(target_features)
+
+        # 2. 計算 Pearson Correlation (完全使用 PyTorch 運算)
         x = source_hist
         y = target_hist
         
-        # H_S bar 和 H_T bar (平均值)
         vx = x - torch.mean(x)
         vy = y - torch.mean(y)
         
-        # 分子: sum((H_S - H_S_bar) * (H_T - H_T_bar))
         numerator = torch.sum(vx * vy)
-        
-        # 分母: sqrt(sum((H_S - H_S_bar)^2) * sum((H_T - H_T_bar)^2))
-        # 加上一個極小值 (epsilon) 避免開根號或除以 0
-        epsilon = 1e-10
-        denominator = torch.sqrt(torch.sum(vx ** 2) * torch.sum(vy ** 2)) + epsilon
+        denominator = torch.sqrt(torch.sum(vx ** 2) * torch.sum(vy ** 2) + 1e-10)
         
         correlation = numerator / denominator
         
-        # 3. 返回 Loss
-        # 論文 和原始碼 的 loss 均為 1 - Corr
+        # 3. Loss = 1 - Correlation
         return 1.0 - correlation
 
     def train(self, num_epochs=10, unlabeled=False):
@@ -252,11 +269,9 @@ class HistCorrDANNModel:
             else:
                 label_loss = (label_loss_source + label_loss_target) / 2
 
-            # source_hist = cv2.calcHist([source_features.detach().numpy().flatten()], [0], None, [100], [0, 1])
-            # target_hist = cv2.calcHist([target_features.detach().numpy().flatten()], [0], None, [100], [0, 1])
             domain_loss = self.domain_invariance_loss(source_features, target_features)
 
-            total_loss = self.loss_weights[0] * label_loss + self.loss_weights[1] * domain_loss
+            total_loss = self.loss_weights[0] * domain_loss + self.loss_weights[1] * label_loss
 
             if training:
                 self.optimizer.zero_grad()
@@ -272,7 +287,7 @@ class HistCorrDANNModel:
             target_correct_predictions += (target_preds == target_labels).sum().item()
             target_total_samples += target_labels.size(0)
             target_accuracy = target_correct_predictions / target_total_samples
-            loss_list = [total_loss.item(), label_loss.item(), domain_loss]
+            loss_list = [total_loss.item(), label_loss.item(), domain_loss.item()]
             acc_list = [(source_accuracy + target_accuracy) / 2, source_accuracy, target_accuracy]
         return loss_list, acc_list
 
@@ -370,7 +385,7 @@ if __name__ == "__main__":
     parser.add_argument('--test', action='store_true' , help='for test')
     parser.add_argument('--model_path', type=str, default='my_model.pth', help='path of .pth file of model')
     parser.add_argument('--work_dir', type=str, default='DANN_CORR', help='create new directory to save result')
-    parser.add_argument('--loss_weights', type=float, nargs=2, default=[1.0, 0.0], help='loss weights for domain and label predictors')
+    parser.add_argument('--loss_weights', type=float, nargs=2, default=[0.1, 10.0], help='loss weights for domain and label predictors')
     parser.add_argument('--epoch', type=int, default=100, help='number of training epochs')
     parser.add_argument('--unlabeled', action='store_true', help='use unlabeled data from target domain during training')
     parser.add_argument('--random_seed', type=int, default=42, help='random seed for reproducibility')

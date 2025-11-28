@@ -7,14 +7,21 @@ Write-Host "[INFO] CWD has been set to: $(Get-Location)" -ForegroundColor Gray
 
 # 1. Define Method Names
 # The script expects the file to be located at: "MethodName/MethodName_reverse.py"
+# $methods = @(
+#     "DANN", 
+#     "DANN_CORR",
+#     "DANN_CORR_GEMINI",
+#     "DNN"
+# )
+
 $methods = @(
-    "DANN", 
-    "DANN_CORR"
+    "DANN_CORR_GEMINI",
+    "DNN"
 )
 
 # 2. Define Random Seeds
 $seeds = @(42, 70, 100)
-
+# $seeds = @(42, 70)
 # 3. Define Modes
 $modes = @("Labeled", "Unlabeled")
 

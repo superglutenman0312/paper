@@ -7,14 +7,22 @@ Write-Host "[INFO] PowerShell loop experiment starting..." -ForegroundColor Gree
 
 # ================= 設定區 =================
 # 1. 定義要執行的 Python 腳本列表
+# $scripts = @(
+#     "DANN/DANN.py", 
+#     "DANN_CORR/DANN_CORR.py", 
+#     "DANN_CORR_GEMINI/DANN_CORR_GEMINI.py",
+#     "DNN/DNN.py"
+# )
+
 $scripts = @(
-    "DANN/DANN_pytorch.py", 
-    "DANN_CORR/DANN_CORR_MALL.py", 
-    "DANN_CORR_GEMINI/DANN_CORR_MALL_gemini.py"
+    "DANN_CORR_GEMINI/DANN_CORR_GEMINI.py",
+    "DNN/DNN.py"
 )
+
 
 # 2. 定義 Random Seeds (那三個種子碼)
 $seeds = @(42, 70, 100)
+# $seeds = @(42, 70)
 
 # 3. 定義模式 (Labeled vs Unlabeled)
 # 邏輯：Labeled 不加參數，Unlabeled 加上 --unlabeled
@@ -70,8 +78,8 @@ foreach ($script in $scripts) {
     }
 }
 
-Write-Host "[INFO] Ploting MDE diagram..." -ForegroundColor Green
-python plot_others_mde.py
+# Write-Host "[INFO] Ploting MDE diagram..." -ForegroundColor Green
+# python plot_others_mde.py
 
 Write-Host "--------------------------------------------------------" -ForegroundColor Magenta
 Write-Host "ALL done."
