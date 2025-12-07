@@ -364,6 +364,7 @@ if __name__ == "__main__":
     parser.add_argument('--epoch', type=int, default=500, help='number of training epochs')
     parser.add_argument('--unlabeled', action='store_true', help='use unlabeled data from target domain during training')
     parser.add_argument('--random_seed', type=int, default=42, help='random seed for reproducibility')
+    parser.add_argument('--case', type=int, default=1, help='random seed for reproducibility')
     args = parser.parse_args()
     
     seed = args.random_seed
@@ -374,6 +375,7 @@ if __name__ == "__main__":
     status_str = 'unlabeled' if args.unlabeled else 'labeled'
     folder_name = f'{loss_str}_{epoch_str}_{status_str}'
     work_dir = os.path.join(script_dir, args.work_dir, f'random_seed_{seed}', folder_name)
+    case = args.case
 
     if args.unlabeled:
         data_drop_out_list = np.array([0.0])
@@ -398,12 +400,19 @@ if __name__ == "__main__":
             dann_model.plot_training_results()
         elif args.test:
             dann_model.load_model(args.model_path)
-            testing_file_paths = [
-                        r'D:\paper_thesis\Histloc_real\Experiment\data\220318\GalaxyA51\wireless_testing.csv',
-                        r'D:\paper_thesis\Histloc_real\Experiment\data\231116\GalaxyA51\wireless_testing.csv',
-                        r'D:\paper_thesis\Histloc_real\Experiment\data\231117\GalaxyA51\wireless_testing.csv'
-                    ]
-            output_paths = ['predictions/220318_results.csv', 'predictions/231116_results.csv', 'predictions/231117_results.csv']
+            if case == 1:
+                testing_file_paths = [
+                            r'D:\paper_thesis\My\data\MCSL\processed_data\20220318_20231116\source_test.csv', # time variation
+                            r'D:\paper_thesis\My\data\MCSL\processed_data\20220318_20231116\target_test.csv', # time variation
+                        ]
+                output_paths = ['predictions/220318_results.csv', 'predictions/231116_results.csv']
+            else:
+                testing_file_paths = [
+                            r'D:\paper_thesis\My\data\MCSL\processed_data\20231116_20231117\source_test.csv', # spatial variation
+                            r'D:\paper_thesis\My\data\MCSL\processed_data\20231116_20231117\target_test.csv', # spatial variation
+                        ]
+                output_paths = ['predictions/231116_results.csv', 'predictions/231117_results.csv']    
+            
             if not os.path.exists('predictions'):
                 os.makedirs('predictions')
             for testing_file_path, output_path in zip(testing_file_paths, output_paths):
