@@ -56,12 +56,12 @@ foreach ($Mode in @("labeled", "unlabeled")) {
             Write-Host "[$Mode]: Training Time Variation ($Alpha, $Beta, Seed=$Seed)..."
             python .\SWD\SWD.py --training_source_domain_data D:/paper_thesis/Histloc_real/Experiment/data/220318/GalaxyA51/wireless_training.csv `
                                   --training_target_domain_data D:/paper_thesis/Histloc_real/Experiment/data/231116/GalaxyA51/wireless_training.csv `
-                                  --work_dir time_variation2 `
+                                  --work_dir time_variation `
                                   --loss_weights $Alpha $Beta --epoch $EpochNum --random_seed $Seed $Flag
             
             # (Test)
             Write-Host "[$Mode]: Testing Time Variation ($Alpha, $Beta, Seed=$Seed)..."
-            python .\SWD\SWD.py --test --work_dir time_variation2 `
+            python .\SWD\SWD.py --test --work_dir time_variation `
                                   --loss_weights $Alpha $Beta --epoch $EpochNum --random_seed $Seed $Flag
 
             # ==========================================
@@ -72,12 +72,12 @@ foreach ($Mode in @("labeled", "unlabeled")) {
             Write-Host "[$Mode]: Training Spatial Variation ($Alpha, $Beta, Seed=$Seed)..."
             python .\SWD\SWD.py --training_source_domain_data D:/paper_thesis/Histloc_real/Experiment/data/231116/GalaxyA51/wireless_training.csv `
                                   --training_target_domain_data D:/paper_thesis/Histloc_real/Experiment/data/231117/GalaxyA51/wireless_training.csv `
-                                  --work_dir spatial_variation2 `
+                                  --work_dir spatial_variation `
                                   --loss_weights $Alpha $Beta --epoch $EpochNum --random_seed $Seed $Flag
             
             # (Test)
             Write-Host "[$Mode]: Testing Spatial Variation ($Alpha, $Beta, Seed=$Seed)..."
-            python .\SWD\SWD.py --test --work_dir spatial_variation2 `
+            python .\SWD\SWD.py --test --work_dir spatial_variation `
                                   --loss_weights $Alpha $Beta --epoch $EpochNum --random_seed $Seed $Flag
                                   
             Write-Host "-------------------------------------------------" -ForegroundColor DarkGray

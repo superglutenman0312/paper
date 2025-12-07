@@ -7,13 +7,13 @@ Write-Host "Run Child Script"
 # Write-Host "[1/3] Running MALL experiments..."
 # & "$PSScriptRoot\run_WD_MALL.ps1"
 
-# Write-Host "[2/3] Running MALL experiments..."
-# & "$PSScriptRoot\run_SWD_MALL.ps1"
+Write-Host "[2/3] Running MALL experiments..."
+& "$PSScriptRoot\run_SWD_MALL.ps1"
 
 Write-Host "[3/3] Running MALL experiments..."
 & "$PSScriptRoot\run_others_MALL.ps1"
 
-Write-Host "Ploting MDE diagram..."
-python "$PSScriptRoot\plot_all_mde2.py"
+# Write-Host "Ploting MDE diagram..."
+# python "$PSScriptRoot\plot_all_mde2.py"
 
 Write-Host "ALL Done"

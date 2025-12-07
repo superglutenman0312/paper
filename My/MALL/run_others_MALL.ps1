@@ -14,10 +14,15 @@ Write-Host "[INFO] PowerShell loop experiment starting..." -ForegroundColor Gree
 #     "DNN/DNN.py"
 # )
 
+# $scripts = @(
+#     "DANN_CORR_GEMINI/DANN_CORR_GEMINI.py",
+#     "DNN/DNN.py"
+# )
+
 $scripts = @(
-    "DANN_CORR_GEMINI/DANN_CORR_GEMINI.py",
     "DNN/DNN.py"
 )
+
 
 
 # 2. 定義 Random Seeds (那三個種子碼)
@@ -26,8 +31,8 @@ $seeds = @(42, 70, 100)
 
 # 3. 定義模式 (Labeled vs Unlabeled)
 # 邏輯：Labeled 不加參數，Unlabeled 加上 --unlabeled
-$modes = @("Labeled", "Unlabeled")
-
+# $modes = @("Labeled", "Unlabeled")
+$modes = @("Labeled")
 # 4. 資料路徑設定 (避免底下指令太長)
 $sourceData = "D:/paper_thesis/My/data/MTLocData/Mall/2021-11-20/wireless_training.csv"
 $targetData = "D:/paper_thesis/My/data/MTLocData/Mall/2022-12-21/wireless_training.csv"

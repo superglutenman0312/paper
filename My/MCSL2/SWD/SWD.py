@@ -101,7 +101,12 @@ class HistCorrDANNModel:
         self.input_size = 7
         self.feature_extractor_neurons = [64, 48]
 
+        # 設定投影數量 (建議至少大於特徵維度 64，這裡設 128 以獲得更穩定的梯度)
+        self.num_projections = 48
+        self.feature_dim = self.feature_extractor_neurons[1] # 64
+
         self._initialize_model()
+        self._initialize_projections()
         self._initialize_optimizer()
         self._initialize_metrics()
 
@@ -152,51 +157,128 @@ class HistCorrDANNModel:
         self.val_total_losses, self.val_label_losses, self.val_domain_losses = [], [], []
         self.val_source_accuracies, self.val_target_accuracies, self.val_total_accuracies = [], [], []
 
+    def _initialize_projections(self):
+        """
+        [修正版] 支援任意 num_projections 數量的 Hadamard 互補基底生成。
+        迴圈執行，直到湊滿指定的數量。
+        """
+        projections_list = []
+        current_count = 0
+        
+        # 預先計算 Hadamard 矩陣 (只算一次)
+        if (self.feature_dim & (self.feature_dim - 1) == 0) and self.feature_dim != 0:
+            h_mat = self._get_hadamard_matrix(self.feature_dim).to(self.device)
+            h_mat = h_mat / torch.sqrt(torch.tensor(float(self.feature_dim)))
+            use_hadamard = True
+        else:
+            use_hadamard = False
+            print("Feature dim not power of 2, Hadamard disabled.")
+
+        while current_count < self.num_projections:
+            # 1. 生成隨機正交基底 (Base)
+            rand_mat = torch.randn(self.feature_dim, self.feature_dim, device=self.device)
+            q_base, _ = torch.linalg.qr(rand_mat)
+            projections_list.append(q_base)
+            current_count += self.feature_dim
+            
+            # 如果已經湊滿了，就提早結束 (避免多算)
+            if current_count >= self.num_projections:
+                break
+
+            # 2. 生成互補基底 (Rotated by Hadamard)
+            if use_hadamard:
+                q_rotated = torch.matmul(q_base, h_mat)
+                projections_list.append(q_rotated)
+                current_count += self.feature_dim
+            else:
+                # 如果不能用 Hadamard，就再生成一組隨機的
+                rand_mat2 = torch.randn(self.feature_dim, self.feature_dim, device=self.device)
+                q2, _ = torch.linalg.qr(rand_mat2)
+                projections_list.append(q2)
+                current_count += self.feature_dim
+
+        # 3. 合併並截斷到精確數量
+        self.projections = torch.cat(projections_list, dim=1)
+        self.projections = self.projections[:, :self.num_projections]
+        
+        # 確保不需要梯度
+        self.projections = self.projections.detach()
+        print(f"Initialized extended orthogonal projections shape: {self.projections.shape}")
+
     def domain_invariance_loss(self, source_features, target_features):
         """
-        計算 Sliced Wasserstein Distance (SWD)。
-        包含自動處理 Batch Size 不一致的機制。
+        SWD Loss (使用預先生成的固定正交投影)
         """
-        # --- [Fix] 處理 Batch Size 不一致的問題 ---
         batch_size_source = source_features.shape[0]
         batch_size_target = target_features.shape[0]
 
         if batch_size_source != batch_size_target:
-            # 取兩者中較小的 batch size
             min_batch_size = min(batch_size_source, batch_size_target)
-            # 截斷較大的那個，使其與較小的匹配
             source_features = source_features[:min_batch_size]
             target_features = target_features[:min_batch_size]
-        # -------------------------------------------
 
-        # 1. 設定投影數量
-        num_projections = 50 
+        # [修改點] 不再這裡隨機生成，直接使用 self.projections
+        # self.projections 已經在 GPU 上了，不需要再 .to(device)
         
-        # 確保投影向量在同一個裝置上
-        device = source_features.device
+        # source_features: (Batch, 64) x projections: (64, 128) -> (Batch, 128)
+        source_projections = torch.matmul(source_features, self.projections)
+        target_projections = torch.matmul(target_features, self.projections)
         
-        # 取得形狀
-        # 注意：這裡要用切過之後的 shape，不能用原本的
-        batch_size = source_features.shape[0] 
-        feature_dim = source_features.shape[1]
-        
-        # 2. 隨機生成投影方向矩陣
-        projections = torch.randn(feature_dim, num_projections, device=device)
-        projections = projections / torch.sqrt(torch.sum(projections**2, dim=0, keepdim=True))
-        
-        # 3. 投影
-        source_projections = torch.matmul(source_features, projections)
-        target_projections = torch.matmul(target_features, projections)
-        
-        # 4. 排序 (Quantile Matching)
+        # 排序 (Sorting is the core of Wasserstein distance in 1D)
         source_sorted, _ = torch.sort(source_projections, dim=0)
         target_sorted, _ = torch.sort(target_projections, dim=0)
         
-        # 5. 計算距離 (L1 Distance)
+        # 計算距離
         wd_loss = torch.abs(source_sorted - target_sorted)
         
-        # 6. 取平均
+        # 這裡我們對所有投影方向取平均，代表對高維分佈差異的估計
         return torch.mean(wd_loss)
+
+    # def domain_invariance_loss(self, source_features, target_features):
+    #     """
+    #     計算 Sliced Wasserstein Distance (SWD)。
+    #     包含自動處理 Batch Size 不一致的機制。
+    #     """
+    #     # --- [Fix] 處理 Batch Size 不一致的問題 ---
+    #     batch_size_source = source_features.shape[0]
+    #     batch_size_target = target_features.shape[0]
+
+    #     if batch_size_source != batch_size_target:
+    #         # 取兩者中較小的 batch size
+    #         min_batch_size = min(batch_size_source, batch_size_target)
+    #         # 截斷較大的那個，使其與較小的匹配
+    #         source_features = source_features[:min_batch_size]
+    #         target_features = target_features[:min_batch_size]
+    #     # -------------------------------------------
+
+    #     # 1. 設定投影數量
+    #     num_projections = 50 
+        
+    #     # 確保投影向量在同一個裝置上
+    #     device = source_features.device
+        
+    #     # 取得形狀
+    #     # 注意：這裡要用切過之後的 shape，不能用原本的
+    #     batch_size = source_features.shape[0] 
+    #     feature_dim = source_features.shape[1]
+        
+    #     # 2. 隨機生成投影方向矩陣
+    #     projections = torch.randn(feature_dim, num_projections, device=device)
+    #     projections = projections / torch.sqrt(torch.sum(projections**2, dim=0, keepdim=True))
+        
+    #     # 3. 投影
+    #     source_projections = torch.matmul(source_features, projections)
+    #     target_projections = torch.matmul(target_features, projections)
+        
+    #     # 4. 排序 (Quantile Matching)
+    #     source_sorted, _ = torch.sort(source_projections, dim=0)
+    #     target_sorted, _ = torch.sort(target_projections, dim=0)
+        
+    #     # 5. 計算距離 (L1 Distance)
+    #     wd_loss = torch.abs(source_sorted - target_sorted)
+        
+    #     # 6. 取平均
+    #     return torch.mean(wd_loss)
 
     def train(self, num_epochs=10, unlabeled=False):
         unlabeled = unlabeled

@@ -3,17 +3,17 @@ r'''
 python SWD.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2019-06-11\wireless_training.csv `
              --training_target_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2019-10-09\wireless_training.csv `
              --work_dir time_variation_1 `
-             --loss_weights 0.1 10 --epoch 5 --random_seed 42 --unlabeled
+             --loss_weights 1 10 --random_seed 42 --unlabeled
 python SWD.py --test --work_dir time_variation_1 `
-             --loss_weights 0.1 10 --epoch 5 --random_seed 42 --unlabeled
+             --loss_weights 1 10 --random_seed 42 --unlabeled
              
 # time variation 2
 python SWD.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2019-06-11\wireless_training.csv `
              --training_target_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2020-02-19\wireless_training.csv `
              --work_dir time_variation_2 `
-             --loss_weights 0.1 10 --epoch 20 --random_seed 42 --unlabeled
+             --loss_weights 1 10 --random_seed 42 --unlabeled
 python SWD.py --test --work_dir time_variation_2 `
-             --loss_weights 0.1 10 --epoch 20 --random_seed 42 --unlabeled
+             --loss_weights 1 10 --random_seed 42 --unlabeled
 '''
 import torch
 import torch.nn as nn

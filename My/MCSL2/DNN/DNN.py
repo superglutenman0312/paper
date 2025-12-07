@@ -134,7 +134,7 @@ class HistCorrDNNModel:
 
     def _initialize_model(self):
         self.feature_extractor = FeatureExtractor(self.input_size, self.feature_extractor_neurons[0], self.feature_extractor_neurons[1])
-        self.label_predictor = LabelPredictor(self.feature_extractor_neurons[1], num_classes=49)
+        self.label_predictor = LabelPredictor(self.feature_extractor_neurons[1], num_classes=41)
         self.model = SimpleDNN(self.feature_extractor, self.label_predictor)
         
         # 搬移到 GPU
@@ -278,7 +278,7 @@ if __name__ == "__main__":
     parser.add_argument('--model_path', type=str, default='dnn_model.pth', help='path of .pth file of model')
     parser.add_argument('--work_dir', type=str, default='DNN_SourceOnly', help='create new directory to save result')
     parser.add_argument('--unlabeled', action='store_true', help='use unlabeled data from target domain during training')
-    parser.add_argument('--epoch', type=int, default=50, help='number of training epochs')
+    parser.add_argument('--epoch', type=int, default=500, help='number of training epochs')
     parser.add_argument('--random_seed', type=int, default=42, help='random seed for reproducibility')
     args = parser.parse_args()
     
@@ -306,7 +306,7 @@ if __name__ == "__main__":
             r'D:\paper_thesis\Histloc_real\Experiment\data\231116\GalaxyA51\wireless_testing.csv',
             r'D:\paper_thesis\Histloc_real\Experiment\data\231117\GalaxyA51\wireless_testing.csv'
         ]
-        output_paths = ['predictions/190611_dnn.csv', 'predictions/191009_dnn.csv', 'predictions/200219_dnn.csv']
+        output_paths = ['predictions/220318_results.csv', 'predictions/231116_results.csv', 'predictions/231117_results.csv']
         
         if not os.path.exists('predictions'):
             os.makedirs('predictions')

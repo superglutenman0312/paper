@@ -14,8 +14,12 @@ Write-Host "[INFO] PowerShell loop experiment starting..." -ForegroundColor Gree
 #     "DNN"
 # )
 
+# $methods = @(
+#     "DANN_CORR_GEMINI",
+#     "DNN"
+# )
+
 $methods = @(
-    "DANN_CORR_GEMINI",
     "DNN"
 )
 

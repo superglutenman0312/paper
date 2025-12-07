@@ -21,8 +21,8 @@ $Seeds = @(42, 70, 100)                             # Random Seed 列表
 # ---------------------------------
 # 2. Outer loop: (unlabeled / labeled)
 # ---------------------------------
-foreach ($Mode in @("labeled", "unlabeled")) {
-
+# foreach ($Mode in @("labeled", "unlabeled")) {
+foreach ($Mode in @("unlabeled")) {
     # Set the python flag based on the $Mode
     $Flag = ""
     if ($Mode -eq "unlabeled") {
@@ -55,16 +55,16 @@ foreach ($Mode in @("labeled", "unlabeled")) {
             # ==========================================
             
             # (Train)
-            Write-Host "[$Mode]: Training Time Reversal 1 ($Alpha, $Beta, Seed=$Seed)..."
-            python .\SWD\SWD_reverse.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data_reverse\2020-02-19\wireless_training.csv `
-                                      --training_target_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data_reverse\2019-06-11\wireless_training.csv `
-                                      --work_dir time_reversal_1 `
-                                      --loss_weights $Alpha $Beta --epoch $EpochNum --random_seed $Seed $Flag
+            # Write-Host "[$Mode]: Training Time Reversal 1 ($Alpha, $Beta, Seed=$Seed)..."
+            # python .\SWD\SWD_reverse.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data_reverse\2020-02-19\wireless_training.csv `
+            #                           --training_target_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data_reverse\2019-06-11\wireless_training.csv `
+            #                           --work_dir time_reversal_1 `
+            #                           --loss_weights $Alpha $Beta --epoch $EpochNum --random_seed $Seed $Flag
             
-            # (Test)
-            Write-Host "[$Mode]: Testing Time Reversal 1 ($Alpha, $Beta, Seed=$Seed)..."
-            python .\SWD\SWD_reverse.py --test --work_dir time_reversal_1 `
-                                      --loss_weights $Alpha $Beta --epoch $EpochNum --random_seed $Seed $Flag
+            # # (Test)
+            # Write-Host "[$Mode]: Testing Time Reversal 1 ($Alpha, $Beta, Seed=$Seed)..."
+            # python .\SWD\SWD_reverse.py --test --work_dir time_reversal_1 `
+            #                           --loss_weights $Alpha $Beta --epoch $EpochNum --random_seed $Seed $Flag
 
             # ==========================================
             # Experiment 2: Time Reversal 2

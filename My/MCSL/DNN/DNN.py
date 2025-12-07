@@ -1,19 +1,18 @@
 r'''
-# time variation 1
-python DNN.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2019-06-11\wireless_training.csv `
-             --training_target_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2019-10-09\wireless_training.csv `
-             --work_dir time_variation_1 `
-             --epoch 5 --random_seed 42
-python DNN.py --test --work_dir time_variation_1 `
-             --epoch 5 --random_seed 42
-             
-# time variation 2
-python DNN.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2019-06-11\wireless_training.csv `
-             --training_target_domain_data D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2020-02-19\wireless_training.csv `
-             --work_dir time_variation_2 `
-             --epoch 20 --random_seed 42
-python DNN.py --test --work_dir time_variation_2 `
-             --epoch 20 --random_seed 42
+# time variation
+python DNN.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\220318\GalaxyA51\wireless_training.csv `
+                      --training_target_domain_data D:\paper_thesis\Histloc_real\Experiment\data\231116\GalaxyA51\wireless_training.csv `
+                      --work_dir time_variation `
+                      --random_seed 42 --unlabeled 
+python DNN.py --test --work_dir time_variation `
+                      --random_seed 42 --unlabeled
+# spatial variation
+python DNN.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\231116\GalaxyA51\wireless_training.csv `
+                      --training_target_domain_data D:\paper_thesis\Histloc_real\Experiment\data\231117\GalaxyA51\wireless_training.csv `
+                      --work_dir spatial_variation `
+                      --random_seed 42 --unlabeled 
+python DNN.py --test --work_dir spatial_variation `
+                      --random_seed 42 --unlabeled
 '''
 
 import torch
@@ -59,8 +58,7 @@ class FeatureExtractor(nn.Module):
 class LabelPredictor(nn.Module):
     def __init__(self, input_size, num_classes):
         super(LabelPredictor, self).__init__()
-        self.fc1 = nn.Linear(input_size, 32)
-        self.fc2 = nn.Linear(32, num_classes)
+        self.fc1 = nn.Linear(input_size, num_classes)
 
     def forward(self, x):
         x = self.fc1(x)
@@ -136,7 +134,7 @@ class HistCorrDNNModel:
 
     def _initialize_model(self):
         self.feature_extractor = FeatureExtractor(self.input_size, self.feature_extractor_neurons[0], self.feature_extractor_neurons[1])
-        self.label_predictor = LabelPredictor(self.feature_extractor_neurons[1], num_classes=49)
+        self.label_predictor = LabelPredictor(self.feature_extractor_neurons[1], num_classes=41)
         self.model = SimpleDNN(self.feature_extractor, self.label_predictor)
         
         # 搬移到 GPU
@@ -280,7 +278,7 @@ if __name__ == "__main__":
     parser.add_argument('--model_path', type=str, default='dnn_model.pth', help='path of .pth file of model')
     parser.add_argument('--work_dir', type=str, default='DNN_SourceOnly', help='create new directory to save result')
     parser.add_argument('--unlabeled', action='store_true', help='use unlabeled data from target domain during training')
-    parser.add_argument('--epoch', type=int, default=50, help='number of training epochs')
+    parser.add_argument('--epoch', type=int, default=500, help='number of training epochs')
     parser.add_argument('--random_seed', type=int, default=42, help='random seed for reproducibility')
     args = parser.parse_args()
     
@@ -304,11 +302,11 @@ if __name__ == "__main__":
         dnn_model.load_model(args.model_path)
         # 這裡的路徑可能需要根據你的電腦調整，或者也改成參數傳入
         testing_file_paths = [
-            r'D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2019-06-11\wireless_testing.csv',
-            r'D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2019-10-09\wireless_testing.csv',
-            r'D:\paper_thesis\Histloc_real\Experiment\data\UM_DSI_DB_v1.0.0_lite\data\tony_data\2020-02-19\wireless_testing.csv'
+            r'D:\paper_thesis\Histloc_real\Experiment\data\220318\GalaxyA51\wireless_testing.csv',
+            r'D:\paper_thesis\Histloc_real\Experiment\data\231116\GalaxyA51\wireless_testing.csv',
+            r'D:\paper_thesis\Histloc_real\Experiment\data\231117\GalaxyA51\wireless_testing.csv'
         ]
-        output_paths = ['predictions/190611_dnn.csv', 'predictions/191009_dnn.csv', 'predictions/200219_dnn.csv']
+        output_paths = ['predictions/220318_results.csv', 'predictions/231116_results.csv', 'predictions/231117_results.csv']
         
         if not os.path.exists('predictions'):
             os.makedirs('predictions')
