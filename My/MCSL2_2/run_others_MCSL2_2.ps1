@@ -35,14 +35,14 @@ $scenarios = @(
         Name = "Time_Variation";
         SourceData = "$baseDataPath\220318\GalaxyA51\wireless_training.csv";
         TargetData = "$baseDataPath\231116\GalaxyA51\wireless_training.csv";
-        DirName = "time_variation",
+        DirName = "time_variation";
         case = 1
     },
     @{
         Name = "Spatial_Variation";
         SourceData = "$baseDataPath\231116\GalaxyA51\wireless_training.csv";
         TargetData = "$baseDataPath\231117\GalaxyA51\wireless_training.csv";
-        DirName = "spatial_variation",
+        DirName = "spatial_variation";
         case = 2
     }
 )
@@ -98,7 +98,7 @@ foreach ($method in $methods) {
                 # --- 2. Testing ---
                 python $scriptPath --test `
                                    --work_dir $currentWorkDir `
-                                   --random_seed $seed --case $($scen.case)`
+                                   --random_seed $seed --case $($scen.case) `
                                    $modeFlag
 
                 Write-Host "Done." -ForegroundColor Gray

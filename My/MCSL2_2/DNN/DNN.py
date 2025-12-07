@@ -3,7 +3,7 @@ r'''
 python DNN.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\220318\GalaxyA51\wireless_training.csv `
                       --training_target_domain_data D:\paper_thesis\Histloc_real\Experiment\data\231116\GalaxyA51\wireless_training.csv `
                       --work_dir time_variation `
-                      --random_seed 42 --unlabeled 
+                      --random_seed 42 --unlabeled --case 1
 python DNN.py --test --work_dir time_variation `
                       --random_seed 42 --unlabeled
 # spatial variation
@@ -95,7 +95,7 @@ class HistCorrDNNModel:
         self.batch_size = 32
         self.lr = lr
         self.input_size = 7
-        self.feature_extractor_neurons = [64, 48]
+        self.feature_extractor_neurons = [64, 32]
         
         # 設定 Device
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

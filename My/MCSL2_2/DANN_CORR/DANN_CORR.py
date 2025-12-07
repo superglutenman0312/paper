@@ -3,7 +3,7 @@
 python DANN_CORR.py --training_source_domain_data D:\paper_thesis\Histloc_real\Experiment\data\220318\GalaxyA51\wireless_training.csv `
                       --training_target_domain_data D:\paper_thesis\Histloc_real\Experiment\data\231116\GalaxyA51\wireless_training.csv `
                       --work_dir time_variation `
-                      --random_seed 42 --unlabeled 
+                      --random_seed 42 --unlabeled --case 1 
 python DANN_CORR.py --test --work_dir time_variation `
                       --random_seed 42 --unlabeled
 # spatial variation
@@ -99,7 +99,7 @@ class HistCorrDANNModel:
         self.loss_weights = loss_weights
         self.lr = lr
         self.input_size = 7
-        self.feature_extractor_neurons = [64, 48]
+        self.feature_extractor_neurons = [64, 32]
 
         self._initialize_model()
         self._initialize_optimizer()
