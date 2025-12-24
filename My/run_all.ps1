@@ -15,8 +15,8 @@ Write-Host "[2/4] Running UM_DSI_DB_reverse2 experiments..."
 Write-Host "[3/4] Running MALL2 experiments..."
 & "$PSScriptRoot\MALL2\run_all_MALL2.ps1"
 
-Write-Host "[4/4] Running MCSL2_2 experiments..."
-& "$PSScriptRoot\MCSL2_2\run_all_MCSL2_2.ps1"
+# Write-Host "[4/4] Running MCSL2_2 experiments..."
+# & "$PSScriptRoot\MCSL2_2\run_all_MCSL2_2.ps1"
 
 $timeSpan = $scriptTimer.Elapsed
 Write-Host "--------------------------------------------------------" -ForegroundColor Green

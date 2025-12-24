@@ -35,8 +35,12 @@ SCENARIOS = {
     "time_variation_2": ("190611_results.csv", "200219_results.csv")
 }
 
+# SCENARIOS = {
+#     "test": ("190611_results.csv", "200219_results.csv")
+# }
+
 # 6. 輸出目錄
-OUTPUT_DIR = "Comparison_Result2"
+OUTPUT_DIR = "Comparison_Result3"
 
 # 7. 根目錄名稱設定
 SWD_ROOT_NAME = "SWD"
@@ -44,7 +48,7 @@ WD_ROOT_NAME = "WD"
 
 # 【新增】Label Map 檔案路徑 (請依實際位置修改)
 # 如果你是用最新的 step2_preprocess.py，檔案可能在 processed_data/20190611_20191009/ 裡面
-MAP_FILE_PATH = r'D:\paper_thesis\My\data\UM_DSI_DB_v1.0.0_lite\data\processed_data\20190611_20200219_masked_outlier_removed\experiment_class_map.csv'
+MAP_FILE_PATH = r'D:\paper_thesis\My\data\UM_DSI_DB_v1.0.0_lite\data\processed_data\20190611_20200219\experiment_class_map.csv'
 
 # ================= 核心函式 (座標與距離) =================
 

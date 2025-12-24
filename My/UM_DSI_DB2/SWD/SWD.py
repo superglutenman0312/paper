@@ -8,11 +8,11 @@ python SWD.py --test --work_dir time_variation_1 `
              --loss_weights 1 10 --epoch 100 --random_seed 70 --unlabeled
              
 # time variation 2
-python SWD.py --training_source_domain_data D:\paper_thesis\My\data\UM_DSI_DB_v1.0.0_lite\data\processed_data\20190611_20200219_masked_outlier_removed\source_train.csv `
-             --training_target_domain_data D:\paper_thesis\My\data\UM_DSI_DB_v1.0.0_lite\data\processed_data\20190611_20200219_masked_outlier_removed\target_train.csv `
-             --work_dir time_variation_2 `
+python SWD.py --training_source_domain_data D:\paper_thesis\My\data\UM_DSI_DB_v1.0.0_lite\data\processed_data\20190611_20200219\source_train.csv `
+             --training_target_domain_data D:\paper_thesis\My\data\UM_DSI_DB_v1.0.0_lite\data\processed_data\20190611_20200219\target_train.csv `
+             --work_dir test `
              --loss_weights 1 10 --epoch 100 --random_seed 70 --unlabeled
-python SWD.py --test --work_dir time_variation_2 `
+python SWD.py --test --work_dir test `
              --loss_weights 1 10 --epoch 100 --random_seed 70 --unlabeled
 '''
 import torch
@@ -103,7 +103,7 @@ class HistCorrDANNModel:
         self.feature_extractor_neurons = [128, 64]
         
         # 設定投影數量 (建議至少大於特徵維度 64，這裡設 128 以獲得更穩定的梯度)
-        self.num_projections = 256
+        self.num_projections = 1024
         self.feature_dim = self.feature_extractor_neurons[1] # 64
 
         # 1. 設定 Device [GPU]

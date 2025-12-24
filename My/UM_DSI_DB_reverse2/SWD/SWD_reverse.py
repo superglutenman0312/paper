@@ -108,7 +108,7 @@ class HistCorrDANNModel:
         self.feature_extractor_neurons = [128, 64]
 
          # 設定投影數量 (建議至少大於特徵維度 64，這裡設 128 以獲得更穩定的梯度)
-        self.num_projections = 256
+        self.num_projections = 1024
         self.feature_dim = self.feature_extractor_neurons[1] # 64
 
         self._initialize_model()

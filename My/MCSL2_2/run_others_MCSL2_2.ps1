@@ -30,20 +30,30 @@ $modes = @("Labeled", "Unlabeled")
 $baseDataPath = "D:\paper_thesis\Histloc_real\Experiment\data"
 
 # Define Scenarios (Time Variation vs Spatial Variation)
+# $scenarios = @(
+#     @{
+#         Name = "Time_Variation";
+#         SourceData = "$baseDataPath\220318\GalaxyA51\wireless_training.csv";
+#         TargetData = "$baseDataPath\231116\GalaxyA51\wireless_training.csv";
+#         DirName = "time_variation";
+#         case = "1"
+#     },
+#     @{
+#         Name = "Spatial_Variation";
+#         SourceData = "$baseDataPath\231116\GalaxyA51\wireless_training.csv";
+#         TargetData = "$baseDataPath\231117\GalaxyA51\wireless_training.csv";
+#         DirName = "spatial_variation";
+#         case = "2"
+#     }
+# )
+
 $scenarios = @(
     @{
         Name = "Time_Variation";
         SourceData = "$baseDataPath\220318\GalaxyA51\wireless_training.csv";
         TargetData = "$baseDataPath\231116\GalaxyA51\wireless_training.csv";
         DirName = "time_variation";
-        case = 1
-    },
-    @{
-        Name = "Spatial_Variation";
-        SourceData = "$baseDataPath\231116\GalaxyA51\wireless_training.csv";
-        TargetData = "$baseDataPath\231117\GalaxyA51\wireless_training.csv";
-        DirName = "spatial_variation";
-        case = 2
+        case = "1"
     }
 )
 
@@ -92,13 +102,13 @@ foreach ($method in $methods) {
                 python $scriptPath --training_source_domain_data $($scen.SourceData) `
                                    --training_target_domain_data $($scen.TargetData) `
                                    --work_dir $currentWorkDir `
-                                   --random_seed $seed --case $($scen.case) `
+                                   --random_seed $seed --case $($scen.case) --epoch 1000 `
                                    $modeFlag
 
                 # --- 2. Testing ---
                 python $scriptPath --test `
                                    --work_dir $currentWorkDir `
-                                   --random_seed $seed --case $($scen.case) `
+                                   --random_seed $seed --case $($scen.case) --epoch 1000 `
                                    $modeFlag
 
                 Write-Host "Done." -ForegroundColor Gray

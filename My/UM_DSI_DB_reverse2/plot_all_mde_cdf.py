@@ -38,7 +38,7 @@ SCENARIOS = {
 }
 
 # 6. 輸出目錄
-OUTPUT_DIR = "Comparison_Result2"
+OUTPUT_DIR = "Comparison_Result3"
 
 # 7. 根目錄名稱
 SWD_ROOT_NAME = "SWD"

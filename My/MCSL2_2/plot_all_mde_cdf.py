@@ -46,7 +46,7 @@ SCENARIO_CONFIG = {
 }
 
 # 6. 輸出目錄
-OUTPUT_DIR = "Comparison_Result2"
+OUTPUT_DIR = "Comparison_Result3"
 
 # 7. 根目錄名稱
 SWD_ROOT_NAME = "SWD"
@@ -54,6 +54,7 @@ WD_ROOT_NAME = "WD"
 
 # 【新增】Label Map 檔案路徑 (請修改為您的實際路徑)
 MAP_FILE_PATH = r"D:\paper_thesis\My\data\MCSL\processed_data\20220318_20231116\experiment_class_map.csv"
+# MAP_FILE_PATH = r"D:\paper_thesis\My\data\MCSL\processed_data\20231116_20231117\experiment_class_map.csv"
 
 # ================= 核心函式 (MCSL 座標與距離) =================
 

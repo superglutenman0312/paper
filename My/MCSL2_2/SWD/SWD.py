@@ -498,7 +498,7 @@ if __name__ == "__main__":
                             r'D:\paper_thesis\My\data\MCSL\processed_data\20220318_20231116\target_test.csv', # time variation
                         ]
                 output_paths = ['predictions/220318_results.csv', 'predictions/231116_results.csv']
-            else:
+            elif case == 2:
                 testing_file_paths = [
                             r'D:\paper_thesis\My\data\MCSL\processed_data\20231116_20231117\source_test.csv', # spatial variation
                             r'D:\paper_thesis\My\data\MCSL\processed_data\20231116_20231117\target_test.csv', # spatial variation
