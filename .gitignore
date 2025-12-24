@@ -1,3 +1,6 @@
 Histloc_real/*
 *.h5
 My/data/*
+*.png
+*.pth
+*.csv
